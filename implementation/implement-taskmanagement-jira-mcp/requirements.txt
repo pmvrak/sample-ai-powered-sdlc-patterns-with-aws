@@ -1,0 +1,25 @@
+# JIRA Client
+atlassian-python-api>=3.41.0
+
+# Web Framework  
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.10.0
+
+# HTTP and Async
+httpx>=0.25.2
+aiofiles>=23.2.0
+
+# JSON and data handling
+jsonschema>=4.19.0
+
+# Development
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+black>=23.11.0
+
+mangum>=0.17.0
