@@ -1,0 +1,183 @@
+version: '3.8'
+
+services:
+  # Main HTTP MCP Server - connects to real AWS resources
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3000:3000"  # Health check port
+      - "3001:3001"  # HTTP MCP server port
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MCP_PORT=3001
+      # AWS Configuration - uses real AWS resources
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - BEDROCK_REGION=${BEDROCK_REGION:-us-east-1}
+      - MODEL_ID=${MODEL_ID:-eu.anthropic.claude-3-7-sonnet-20250219-v1:0}
+      # S3 Bucket - from CDK deployment
+      - BUCKET_NAME=${BUCKET_NAME}
+      # Lambda Function ARNs - from CDK deployment
+      - DOMAIN_ANALYZER_LAMBDA_ARN=${DOMAIN_ANALYZER_LAMBDA_ARN}
+      - DOC_GENERATOR_LAMBDA_ARN=${DOC_GENERATOR_LAMBDA_ARN}
+      # Bedrock Agent Configuration
+      - BEDROCK_AGENT_ID=${BEDROCK_AGENT_ID}
+      - BEDROCK_AGENT_ALIAS_ID=${BEDROCK_AGENT_ALIAS_ID:-TSTALIASID}
+      # Cognito Configuration (optional)
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      # MCP Server Configuration
+      - MCP_SERVER_NAME=openapi-documentation-mcp-dev
+      - MCP_SERVER_VERSION=1.0.0
+      - MCP_MAX_CONNECTIONS=50
+      - MCP_CONNECTION_TIMEOUT=30000
+      # Logging and Debugging
+      - LOG_LEVEL=debug
+      - ENABLE_METRICS=true
+      - ENABLE_REQUEST_LOGGING=true
+      - HEALTH_CHECK_ENABLED=true
+      # Performance Tuning
+      - LAMBDA_TIMEOUT=300000
+      - LAMBDA_RETRY_ATTEMPTS=3
+      - LAMBDA_RETRY_DELAY=1000
+    env_file:
+      - .env  # Load additional environment variables from .env file
+    networks:
+      - mcp-network
+    volumes:
+      - ./src:/app/src:ro  # Mount source for development hot-reload
+      - ./logs:/app/logs   # Mount logs directory
+      - ~/.aws:/home/mcp/.aws:ro  # Mount AWS credentials for development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development tools container
+  dev-tools:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: tail -f /dev/null  # Keep container running
+    networks:
+      - mcp-network
+    profiles:
+      - dev-tools
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    profiles:
+      - cache
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Monitoring with Prometheus (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - mcp-network
+    profiles:
+      - monitoring
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Grafana for visualization (optional)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - mcp-network
+    profiles:
+      - monitoring
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/lib/grafana/plugins
+
+  # LocalStack for offline development (optional)
+  localstack:
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"  # LocalStack edge port
+    environment:
+      - SERVICES=lambda,s3,bedrock,iam,sts
+      - DEBUG=1
+      - LAMBDA_EXECUTOR=local  # Changed from docker to avoid docker socket requirement
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - PERSISTENCE=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      # Removed docker socket mount for security
+      - "./localstack-data:/tmp/localstack/data"
+      - "./localstack-init:/etc/localstack/init/ready.d"
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    profiles:
+      - localstack
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
