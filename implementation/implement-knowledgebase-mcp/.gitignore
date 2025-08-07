@@ -10,12 +10,23 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment variables
+# Environment variables (for local development only)
 .env
 .env.local
+.env.development
 .env.development.local
-.env.test.local
+.env.staging
+.env.staging.local
+.env.production
 .env.production.local
+.env.test.local
+
+# Debug and test files that may contain sensitive data
+debug-*.js
+test-*.js
+demo-*.js
+*-debug.js
+*-test.js
 
 # Logs
 logs/
@@ -61,14 +72,14 @@ Thumbs.db
 *.temp
 .cache/
 
-
-# AWS
+# AWS credentials and config
 .aws/
+aws-credentials.json
+*-credentials.json
+
+# Generated deployment files
+mcp-config-template.json
 
 # Misc
 *.tgz
 *.tar.gz
-.env.development
-project-kb-mcp/security-reports/semgrep-report.json
-.kiro/
-.kiro/settings/mcp.json
