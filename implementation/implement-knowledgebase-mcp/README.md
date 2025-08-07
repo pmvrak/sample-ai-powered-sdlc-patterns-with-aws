@@ -124,7 +124,12 @@ aws cognito-identity create-identity-pool \
 
 **3. Set up Knowledge Base (Choose one):**
 
-**Option A: Amazon Bedrock Knowledge Base**
+You can use either Amazon Bedrock Knowledge Base or OpenSearch Serverless as your backend. Both options provide powerful search capabilities:
+
+- **Amazon Bedrock Knowledge Base** (Recommended): Fully managed service with built-in vector embeddings, automatic document processing, and seamless integration with foundation models. Best for most use cases.
+- **OpenSearch Serverless**: More control over search configuration and indexing. Better for custom search requirements or existing OpenSearch workflows.
+
+**Option A: Amazon Bedrock Knowledge Base (Recommended)**
 ```bash
 # Follow the comprehensive AWS tutorial for setting up Bedrock Knowledge Base:
 # https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-getting-started.html#s3-vectors-bedrock-kb-tutorial
@@ -187,14 +192,14 @@ Update the generated template with your AWS resource details:
         "COGNITO_USERNAME": "your-username@example.com",
         "COGNITO_PASSWORD": "your-secure-password",
         "DEFAULT_BACKEND": "bedrock",
-        "BEDROCK_KNOWLEDGE_BASE_ID": "XXXXXXXXXX"
-
-# OpenSearch Configuration (if using OpenSearch)
-OPENSEARCH_ENDPOINT=https://your-collection.us-east-1.aoss.amazonaws.com
-OPENSEARCH_COLLECTION_NAME=project-knowledge-base
-
-# AWS General Configuration
-AWS_REGION=us-east-1
+        "BEDROCK_KNOWLEDGE_BASE_ID": "XXXXXXXXXX",
+        "OPENSEARCH_ENDPOINT": "https://your-collection.us-east-1.aoss.amazonaws.com",
+        "OPENSEARCH_COLLECTION_NAME": "project-knowledge-base",
+        "AWS_REGION": "us-east-1"
+      }
+    }
+  }
+}
 ```
 
 **🔐 Security Notes:**
@@ -652,7 +657,7 @@ This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) fil
 
 ## Disclaimer
 
-The solution architecture sample code is provided without any guarantees, and you're not recommended to use it for production-grade workloads. The intention is to provide content to build and learn. Be sure of reading the licensing terms."
+The solution architecture sample code is provided without any guarantees, and you're not recommended to use it for production-grade workloads. The intention is to provide content to build and learn. Be sure of reading the licensing terms.
 
 ---
 
