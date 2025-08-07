@@ -3,6 +3,9 @@
 ## Introduction
 
 This is a comprehensive development pattern that integrates Amazon S3 Vector knowledge bases with Kiro and Amazon Q CLI to streamline code development and test generation workflows, while strictly adhering to project specifications and guidelines. This solution provides contextual code suggestions and project guides to automated developer agents by using universal MCP protocol.
+#### 🎥 Demo in Kiro
+
+https://github.com/user-attachments/assets/c90d340b-9282-4456-8205-01f8a646cda1
 
 #### 🎯 Overview
 
