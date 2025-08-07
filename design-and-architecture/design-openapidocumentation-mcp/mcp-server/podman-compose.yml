@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # Main MCP Server - connects to real AWS resources (Podman optimized)
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3000:3000"  # Health check port
+      - "3001:3001"  # MCP server port
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MCP_PORT=3001
+      # AWS Configuration - uses real AWS resources
+      - AWS_REGION=${AWS_REGION:-eu-west-1}
+      - BEDROCK_REGION=${BEDROCK_REGION:-eu-west-1}
+      - MODEL_ID=${MODEL_ID:-eu.anthropic.claude-3-7-sonnet-20250219-v1:0}
+      # S3 Bucket - from CDK deployment
+      - BUCKET_NAME=${BUCKET_NAME}
+      # Lambda Function ARNs - from CDK deployment
+      - DOMAIN_ANALYZER_LAMBDA_ARN=${DOMAIN_ANALYZER_LAMBDA_ARN}
+      - DOC_GENERATOR_LAMBDA_ARN=${DOC_GENERATOR_LAMBDA_ARN}
+      # Bedrock Agent Configuration
+      - BEDROCK_AGENT_ID=${BEDROCK_AGENT_ID}
+      - BEDROCK_AGENT_ALIAS_ID=${BEDROCK_AGENT_ALIAS_ID:-TSTALIASID}
+      # Cognito Configuration (optional)
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}
+      # MCP Server Configuration
+      - MCP_SERVER_NAME=openapi-documentation-mcp-dev
+      - MCP_SERVER_VERSION=1.0.0
+      - MCP_MAX_CONNECTIONS=50
+      - MCP_CONNECTION_TIMEOUT=30000
+      # Logging and Debugging
+      - LOG_LEVEL=debug
+      - ENABLE_METRICS=true
+      - ENABLE_REQUEST_LOGGING=true
+      - HEALTH_CHECK_ENABLED=true
+      # Performance Tuning
+      - LAMBDA_TIMEOUT=300000
+      - LAMBDA_RETRY_ATTEMPTS=3
+      - LAMBDA_RETRY_DELAY=1000
+    env_file:
+      - .env  # Load additional environment variables from .env file
+    networks:
+      - mcp-network
+    volumes:
+      - ./logs:/app/logs:Z   # Mount logs directory with SELinux context
+      - ~/.aws:/home/mcp/.aws:ro,Z  # Mount AWS credentials with SELinux context
+    restart: unless-stopped
+    # Podman-compatible health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Podman security options
+    security_opt:
+      - label=disable  # Disable SELinux for development
+
+  # Development tools container (Podman optimized)
+  dev-tools:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app:Z
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: tail -f /dev/null  # Keep container running
+    networks:
+      - mcp-network
+    profiles:
+      - dev-tools
+    security_opt:
+      - no-new-privileges:true
+      - label=disable  # Disable SELinux for development
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data:Z
+    networks:
+      - mcp-network
+    restart: unless-stopped
+    profiles:
+      - cache
+    security_opt:
+      - no-new-privileges:true
+      - label=disable  # Disable SELinux for development
+    read_only: true
+    tmpfs:
+      - /tmp
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis-data:
