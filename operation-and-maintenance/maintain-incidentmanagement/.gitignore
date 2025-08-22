@@ -1,0 +1,322 @@
+# 🚀 Incident Management System - Git Ignore
+# Excludes temporary files, secrets, logs, and build artifacts
+
+# ===== PYTHON =====
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ===== VIRTUAL ENVIRONMENTS =====
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.env/
+pyvenv.cfg
+
+# ===== ENVIRONMENT & SECRETS =====
+.env
+.env.local
+.env.development
+.env.test
+.env.testing
+.env.production
+.env.staging
+*.env
+.envrc
+
+# Slack tokens and webhooks
+slack_token.txt
+slack_webhook.txt
+slack_secrets.json
+
+# AWS credentials
+.aws/
+aws_credentials.json
+*.pem
+*.key
+*.crt
+
+# ===== LOGS & TEMPORARY FILES =====
+logs/
+*.log
+*.log.*
+log_*.txt
+splunk_tools_*.log
+incident_management.log
+api_access.log
+error.log
+debug.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== TESTING & COVERAGE =====
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.tox/
+.nox/
+htmlcov/
+.cache
+nosetests.xml
+coverage/
+
+# Test artifacts
+test_results/
+test_output/
+test_*.json
+test_*.xml
+temp_test.py
+temp_*.py
+
+# ===== DATABASE & STORAGE =====
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+
+# Local storage
+local_storage/
+backups/
+*.dump
+*.sql
+
+# ===== CACHING =====
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.black/
+
+# ===== IDE & EDITOR FILES =====
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===== SYSTEM FILES =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== DEPLOYMENT & BUILD =====
+# CDK
+cdk.out/
+cdk.context.json
+*.d.ts
+node_modules/
+package-lock.json
+yarn.lock
+
+# Docker
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+.docker/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+*.tfvars
+
+# ===== MONITORING & METRICS =====
+# Prometheus
+prometheus_data/
+*.prom
+
+# Grafana
+grafana_data/
+
+# Metrics
+monitoring_data/
+*.metrics
+
+# ===== INCIDENT MANAGEMENT SPECIFIC =====
+# Runtime data
+incident_data/
+active_incidents/
+incident_cache/
+notification_queue/
+
+# Temporary incident files
+incident_*.json
+temp_incident_*.py
+incident_backup_*.json
+
+# Slack test files
+slack_test_*.py
+temp_slack_*.json
+
+# Splunk temporary files
+splunk_temp/
+splunk_cache/
+*.splunk
+
+# ===== DOCUMENTATION BUILD =====
+# Sphinx
+_build/
+_static/
+_templates/
+
+# MkDocs
+site/
+
+# ===== SECURITY & COMPLIANCE =====
+# Security scan results
+security_scan_*.json
+vulnerability_report_*.txt
+
+# Compliance reports
+compliance_*.pdf
+audit_*.json
+
+# ===== PERFORMANCE & PROFILING =====
+# Profiling
+*.prof
+profile_*.txt
+performance_*.json
+
+# Memory dumps
+*.dump
+core.*
+
+# ===== BACKUP & ARCHIVE =====
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# ===== CUSTOM EXCLUSIONS =====
+# Add your custom files/directories here
+
+# Local configuration overrides
+local_config.py
+local_settings.py
+dev_config.py
+
+# Personal notes and TODO files
+TODO.md
+NOTES.md
+personal_notes.txt
+
+# Experimental files
+experiment_*.py
+test_experiment_*.py
+playground/
+scratch/
+
+# ===== KEEP THESE IMPORTANT FILES =====
+# (These are explicitly NOT ignored)
+# !requirements.txt
+# !production_api_with_slack.py
+# !DEPLOYMENT_GUIDE.md
+# !PROJECT_STRUCTURE.md
+# !README.md
+
+# ===== END OF GITIGNORE =====
+# Last updated: 2025-07-25
+# For: Intelligent Incident Management System
+
+splunk/mcp/incident_management/test/
+.kiro/
