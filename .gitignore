@@ -72,3 +72,4 @@ Thumbs.db
 project-kb-mcp/security-reports/semgrep-report.json
 .kiro/
 .kiro/settings/mcp.json
+__pycache__/
