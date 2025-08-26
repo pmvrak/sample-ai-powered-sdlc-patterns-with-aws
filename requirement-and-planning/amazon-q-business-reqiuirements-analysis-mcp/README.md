@@ -276,3 +276,28 @@ cdk deploy
 - Consider implementing token caching for performance
 - Review IAM permissions regularly
 - Enable AWS CloudTrail for audit logging
+
+## Clean Up
+
+To remove all deployed resources:
+
+```bash
+# Delete the CDK stack
+cd cdk
+cdk destroy
+
+# Clean up any remaining S3 objects if needed
+aws s3 rm s3://your-bucket-name --recursive
+```
+
+## Security
+
+See CONTRIBUTING for more information.
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.
+
+## Disclaimer
+
+The solution architecture sample code is provided without any guarantees, and you're not recommended to use it for production-grade workloads. The intention is to provide content to build and learn. Be sure of reading the licensing terms.

@@ -831,6 +831,23 @@ The server includes mappings for 554+ AWS services including:
 
 
 
+## Clean Up
+
+To remove all deployed resources:
+
+```bash
+# Delete the CDK stack
+cd cdk
+cdk destroy
+
+# Clean up any remaining S3 objects if needed
+aws s3 rm s3://your-diagrams-bucket-name --recursive
+```
+
+## Security
+
+See CONTRIBUTING for more information.
+
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
