@@ -1,8 +1,10 @@
 # Amazon Q Business Requirements Analysis MCP Server
 
+## 1. Introduction
+
 A Model Context Protocol (MCP) server that provides secure access to Amazon Q Business for requirements analysis and content creation. Features enterprise-grade authentication with Cognito JWT tokens and SigV4 signing.
 
-## Features
+### Features
 
 - **RETRIEVE Tool**: Query Amazon Q Business for information retrieval
 - **CREATE Tool**: Generate requirements, user stories, and documentation using Q Business CREATOR_MODE
@@ -10,7 +12,7 @@ A Model Context Protocol (MCP) server that provides secure access to Amazon Q Bu
 - **Secure Architecture**: Lambda-based MCP server with proper IAM permissions
 - **Production Ready**: CDK infrastructure with Docker containerization
 
-## Architecture
+## 2. Solution Architecture (with steps explanation)
 
 ![Architecture Diagram](image/qmcp.jpg)
 
@@ -19,15 +21,15 @@ The system uses a hybrid authentication approach:
 2. SigV4 signing secures API Gateway requests
 3. Lambda exchanges JWT for IDC context to access Q Business
 
-## Quick Start
-
-### Prerequisites
+## 3. Prerequisites
 
 - **Amazon Q Business Requirements Analysis Pattern**: Deploy the base pattern first from [AWS Samples Repository](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main/requirement-and-planning/amazon-q-business-requirements-analysis)
 - AWS CLI configured with appropriate permissions
 - Docker installed
 - Python 3.9+
 - CDK CLI installed
+
+## 4. Deployment instructions
 
 ### 1. Configure Environment
 
@@ -96,7 +98,13 @@ aws qbusiness update-chat-controls-configuration \
 
 **Important**: Without enabling CREATOR_MODE, the CREATE tool will fail with a validation error. This step is required for content generation capabilities.
 
-### 5. Test the System
+### 5. Complete Deployment
+
+Your MCP server is now deployed and ready to use.
+
+## 5. Test
+
+### Testing the System
 
 ```bash
 # Test both RETRIEVE and CREATE tools
@@ -277,7 +285,7 @@ cdk deploy
 - Review IAM permissions regularly
 - Enable AWS CloudTrail for audit logging
 
-## Clean Up
+## 6. Clean Up
 
 To remove all deployed resources:
 
@@ -290,14 +298,14 @@ cdk destroy
 aws s3 rm s3://your-bucket-name --recursive
 ```
 
-## Security
+## 7. Security
 
 See CONTRIBUTING for more information.
 
-## License
+## 8. License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
 
-## Disclaimer
+## 9. Disclaimer
 
 The solution architecture sample code is provided without any guarantees, and you're not recommended to use it for production-grade workloads. The intention is to provide content to build and learn. Be sure of reading the licensing terms.
