@@ -1,6 +1,6 @@
 # AWS Architecture Design MCP Server
 
-## Introduction
+## 1. Introduction
 
 A comprehensive Model Context Protocol (MCP) server that provides AI-powered AWS architecture design tools. Generate diagrams, analyze architectures, create infrastructure code, and get expert AWS guidance - all through a secure, authenticated API.
 
@@ -12,7 +12,7 @@ The MCP server provides 4 core tools for AWS architecture design:
 - **Generate Architecture Code**: Generate Infrastructure as Code templates
 - **Analyze Architecture**: Analyze architectures against AWS best practices
 
-## Solution Architecture (with steps explanation)
+## 2. Solution Architecture (with steps explanation)
 
 ### System Architecture
 
@@ -51,7 +51,7 @@ The server includes mappings for 554+ AWS services including:
 - **Machine Learning**: SageMaker, Bedrock, Comprehend
 - **Management**: CloudWatch, CloudTrail, Config, Systems Manager
 
-## Prerequisites
+## 3. Prerequisites
 
 Before deploying the MCP server, ensure you have:
 
@@ -81,7 +81,7 @@ npm install -g aws-cdk@latest
 aws configure
 ```
 
-## Deployment instructions
+## 4. Deployment instructions
 
 ### Quick Start
 
@@ -271,6 +271,178 @@ The CDK deployment creates these resources in **your AWS account**:
 
 **Estimated monthly cost for light usage: $5-15/month**
 
+
+
+### Authentication
+
+The MCP server requires AWS SigV4 authentication for all requests.
+
+#### Required IAM Permissions
+
+Your AWS user/role needs these permissions:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "lambda:InvokeFunction",
+        "lambda:InvokeFunctionUrl"
+      ],
+      "Resource": "arn:aws:lambda:*:*:function:MCPArchitectureServer-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock-runtime:InvokeModel"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:*:inference-profile/*"
+      ]
+    }
+  ]
+}
+```
+
+#### Authentication Methods
+
+##### Method 1: AWS CLI Profile
+```bash
+# Configure AWS profile
+aws configure --profile your-profile
+
+# Use with awscurl
+awscurl --service lambda --region us-east-1 --profile your-profile \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
+  https://your-endpoint.lambda-url.us-east-1.on.aws/
+```
+
+##### Method 2: Environment Variables
+```bash
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_DEFAULT_REGION=us-east-1
+
+awscurl --service lambda --region us-east-1 \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
+  https://your-endpoint.lambda-url.us-east-1.on.aws/
+```
+
+##### Method 3: IAM Role (EC2/Lambda)
+If running from EC2 or Lambda, the instance/function role will be used automatically.
+
+#### Testing Authentication
+
+```bash
+# Test server health (no authentication required)
+curl https://your-endpoint.lambda-url.us-east-1.on.aws/
+
+# Test authenticated endpoint
+awscurl --service lambda --region us-east-1 \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
+  https://your-endpoint.lambda-url.us-east-1.on.aws/
+```
+
+### Advanced Configuration
+
+#### Environment Variables
+
+The Lambda function supports these environment variables:
+
+```bash
+# Bedrock Configuration
+BEDROCK_REGION=us-east-1                    # Bedrock service region
+BEDROCK_MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0  # Model ID
+
+# S3 Configuration  
+S3_BUCKET_NAME=your-bucket-name             # S3 bucket for diagrams
+
+# Vector Store Configuration
+VECTORSTORE_PATH=/var/task/local_index      # Path to FAISS index
+
+# Logging Configuration
+LOG_LEVEL=INFO                              # Logging level (DEBUG, INFO, WARN, ERROR)
+```
+
+#### Lambda Configuration
+
+The function is configured with:
+- **Memory**: 10GB (for complex diagram generation)
+- **Timeout**: 10 minutes (for enterprise architectures)
+- **Ephemeral Storage**: 10GB (for diagram processing)
+- **Runtime**: Python 3.11 on Amazon Linux 2
+
+#### Customizing Deployment
+
+Modify `cdk/stack/stack.py` to customize:
+
+```python
+# Change Lambda configuration
+lambda_function = _lambda.Function(
+    self, "MCPServerFunction",
+    runtime=_lambda.Runtime.PYTHON_3_11,
+    memory_size=10240,  # 10GB
+    timeout=Duration.minutes(10),
+    ephemeral_storage_size=Size.gibibytes(10)
+)
+
+# Change S3 bucket configuration
+bucket = s3.Bucket(
+    self, "DiagramsBucket",
+    versioned=True,
+    encryption=s3.BucketEncryption.S3_MANAGED,
+    lifecycle_rules=[
+        s3.LifecycleRule(
+            expiration=Duration.days(30)  # Auto-delete after 30 days
+        )
+    ]
+)
+```
+
+#### Monitoring and Logging
+
+##### CloudWatch Metrics
+- Lambda invocation count and duration
+- Error rates and throttling
+- Memory and storage utilization
+
+##### CloudWatch Logs
+- Request/response logging for all MCP calls
+- Diagram generation steps with detailed tracing
+- Error handling with retry attempts
+
+##### Custom Dashboards
+Create CloudWatch dashboards to monitor:
+- API request patterns
+- Diagram generation success rates
+- Cost and usage metrics
+
+#### Security Best Practices
+
+1. **Least Privilege IAM**: Grant minimal required permissions
+2. **VPC Configuration**: Deploy Lambda in private subnets if needed
+3. **Encryption**: Enable encryption at rest for S3 and Lambda
+4. **Access Logging**: Enable CloudTrail for API access logging
+5. **Rate Limiting**: Implement client-side rate limiting
+
+#### Performance Optimization
+
+1. **Cold Start Reduction**: Use provisioned concurrency for consistent performance
+2. **Memory Optimization**: Adjust Lambda memory based on usage patterns
+3. **Caching**: Implement response caching for frequently requested diagrams
+4. **Batch Processing**: Group multiple requests when possible
+
+## 5. Test
+
+After successful deployment, verify your MCP server is working correctly:
+
 ### Available Tools
 
 The MCP server provides 4 core tools for AWS architecture design:
@@ -452,176 +624,6 @@ awscurl --service lambda --region us-east-1 \
   https://your-endpoint.lambda-url.us-east-1.on.aws/
 ```
 
-### Authentication
-
-The MCP server requires AWS SigV4 authentication for all requests.
-
-#### Required IAM Permissions
-
-Your AWS user/role needs these permissions:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "lambda:InvokeFunction",
-        "lambda:InvokeFunctionUrl"
-      ],
-      "Resource": "arn:aws:lambda:*:*:function:MCPArchitectureServer-*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel",
-        "bedrock-runtime:InvokeModel"
-      ],
-      "Resource": [
-        "arn:aws:bedrock:*::foundation-model/*",
-        "arn:aws:bedrock:*:*:inference-profile/*"
-      ]
-    }
-  ]
-}
-```
-
-#### Authentication Methods
-
-##### Method 1: AWS CLI Profile
-```bash
-# Configure AWS profile
-aws configure --profile your-profile
-
-# Use with awscurl
-awscurl --service lambda --region us-east-1 --profile your-profile \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
-  https://your-endpoint.lambda-url.us-east-1.on.aws/
-```
-
-##### Method 2: Environment Variables
-```bash
-export AWS_ACCESS_KEY_ID=your-access-key
-export AWS_SECRET_ACCESS_KEY=your-secret-key
-export AWS_DEFAULT_REGION=us-east-1
-
-awscurl --service lambda --region us-east-1 \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
-  https://your-endpoint.lambda-url.us-east-1.on.aws/
-```
-
-##### Method 3: IAM Role (EC2/Lambda)
-If running from EC2 or Lambda, the instance/function role will be used automatically.
-
-#### Testing Authentication
-
-```bash
-# Test server health (no authentication required)
-curl https://your-endpoint.lambda-url.us-east-1.on.aws/
-
-# Test authenticated endpoint
-awscurl --service lambda --region us-east-1 \
-  -X POST -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' \
-  https://your-endpoint.lambda-url.us-east-1.on.aws/
-```
-
-### Advanced Configuration
-
-#### Environment Variables
-
-The Lambda function supports these environment variables:
-
-```bash
-# Bedrock Configuration
-BEDROCK_REGION=us-east-1                    # Bedrock service region
-BEDROCK_MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0  # Model ID
-
-# S3 Configuration  
-S3_BUCKET_NAME=your-bucket-name             # S3 bucket for diagrams
-
-# Vector Store Configuration
-VECTORSTORE_PATH=/var/task/local_index      # Path to FAISS index
-
-# Logging Configuration
-LOG_LEVEL=INFO                              # Logging level (DEBUG, INFO, WARN, ERROR)
-```
-
-#### Lambda Configuration
-
-The function is configured with:
-- **Memory**: 10GB (for complex diagram generation)
-- **Timeout**: 10 minutes (for enterprise architectures)
-- **Ephemeral Storage**: 10GB (for diagram processing)
-- **Runtime**: Python 3.11 on Amazon Linux 2
-
-#### Customizing Deployment
-
-Modify `cdk/stack/stack.py` to customize:
-
-```python
-# Change Lambda configuration
-lambda_function = _lambda.Function(
-    self, "MCPServerFunction",
-    runtime=_lambda.Runtime.PYTHON_3_11,
-    memory_size=10240,  # 10GB
-    timeout=Duration.minutes(10),
-    ephemeral_storage_size=Size.gibibytes(10)
-)
-
-# Change S3 bucket configuration
-bucket = s3.Bucket(
-    self, "DiagramsBucket",
-    versioned=True,
-    encryption=s3.BucketEncryption.S3_MANAGED,
-    lifecycle_rules=[
-        s3.LifecycleRule(
-            expiration=Duration.days(30)  # Auto-delete after 30 days
-        )
-    ]
-)
-```
-
-#### Monitoring and Logging
-
-##### CloudWatch Metrics
-- Lambda invocation count and duration
-- Error rates and throttling
-- Memory and storage utilization
-
-##### CloudWatch Logs
-- Request/response logging for all MCP calls
-- Diagram generation steps with detailed tracing
-- Error handling with retry attempts
-
-##### Custom Dashboards
-Create CloudWatch dashboards to monitor:
-- API request patterns
-- Diagram generation success rates
-- Cost and usage metrics
-
-#### Security Best Practices
-
-1. **Least Privilege IAM**: Grant minimal required permissions
-2. **VPC Configuration**: Deploy Lambda in private subnets if needed
-3. **Encryption**: Enable encryption at rest for S3 and Lambda
-4. **Access Logging**: Enable CloudTrail for API access logging
-5. **Rate Limiting**: Implement client-side rate limiting
-
-#### Performance Optimization
-
-1. **Cold Start Reduction**: Use provisioned concurrency for consistent performance
-2. **Memory Optimization**: Adjust Lambda memory based on usage patterns
-3. **Caching**: Implement response caching for frequently requested diagrams
-4. **Batch Processing**: Group multiple requests when possible
-
-## Test
-
-After successful deployment, verify your MCP server is working correctly:
-
 ### Quick Health Check
 ```bash
 # Test basic connectivity
@@ -773,7 +775,7 @@ awscurl --service lambda --region us-east-1 \
 
 
 
-## Clean Up
+## 6. Clean Up
 
 To remove all deployed resources:
 
@@ -786,14 +788,14 @@ cdk destroy
 aws s3 rm s3://your-diagrams-bucket-name --recursive
 ```
 
-## Security
+## 7. Security
 
 See CONTRIBUTING for more information.
 
-## License
+## 8. License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
 
-## Disclaimer
+## 9. Disclaimer
 
 The solution architecture sample code is provided without any guarantees, and you're not recommended to use it for production-grade workloads. The intention is to provide content to build and learn. Be sure of reading the licensing terms.

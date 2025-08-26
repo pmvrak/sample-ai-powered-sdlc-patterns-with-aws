@@ -111,20 +111,57 @@ Your MCP server is now deployed and ready to use.
 python3 test_mcp_integrated_auth.py your-username your-password
 ```
 
-## Authentication Requirements
+### Available Tools
+
+The MCP server provides two main tools for interacting with Amazon Q Business:
+
+#### RETRIEVE Tool
+- **Purpose**: Query your Amazon Q Business knowledge base to find and analyze existing information
+- **Capabilities**: Search indexed documents (Confluence, SharePoint, etc.), extract requirements from documentation, summarize content, and answer questions about existing data sources
+- **Tool Name**: `mcp_amazon_q_business_retrieve`
+
+#### CREATE Tool  
+- **Purpose**: Generate new content using Amazon Q Business AI capabilities based on your knowledge base
+- **Capabilities**: Create user stories, technical specifications, acceptance criteria, test cases, project plans, and other documentation
+- **Tool Name**: `mcp_amazon_q_business_create`
+- **Requirement**: CREATOR_MODE must be enabled in your Q Business application
+
+### Usage Examples
+
+#### Example 1: Retrieving Information
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "mcp_amazon_q_business_retrieve",
+    "arguments": {
+      "message": "What are the authentication requirements in our documentation?"
+    }
+  },
+  "id": 1
+}
+```
+
+#### Example 2: Creating Content
+```json
+{
+  "
+
+### Authentication Requirements
 
 To use the MCP server, you need:
 
 1. **Valid JWT token** from your Cognito User Pool (configured in `deployment_config.env`)
 2. **AWS SigV4 signed request** to the API Gateway endpoint
 
-### Required Headers
+#### Required Headers
 - `Authorization`: AWS SigV4 signature
 - `X-Amz-Date`: Request timestamp  
 - `X-Cognito-JWT`: Your Cognito JWT token
 - `Content-Type`: application/json
 
-### Complete Request Example
+#### Complete Request Example
 ```bash
 curl -X POST https://your-api-id.execute-api.us-east-1.amazonaws.com/ \
   -H "Authorization: AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20231201/us-east-1/execute-api/aws4_request, SignedHeaders=host;x-amz-date;x-cognito-jwt, Signature=example-signature" \
@@ -144,9 +181,9 @@ curl -X POST https://your-api-id.execute-api.us-east-1.amazonaws.com/ \
   }'
 ```
 
-## MCP Tools
+### MCP Tools
 
-### RETRIEVE Tool
+#### RETRIEVE Tool
 The RETRIEVE tool queries your Amazon Q Business knowledge base to find and analyze existing information. It can search through your indexed documents (Confluence, SharePoint, etc.), extract requirements from documentation, summarize content, and answer questions about your existing data sources.
 
 **Tool Call:**
@@ -164,7 +201,7 @@ The RETRIEVE tool queries your Amazon Q Business knowledge base to find and anal
 }
 ```
 
-### CREATE Tool  
+#### CREATE Tool  
 The CREATE tool uses Amazon Q Business AI capabilities to generate new content based on your knowledge base. It can create user stories, technical specifications, acceptance criteria, test cases, project plans, and other documentation by leveraging both AI and your organization's existing knowledge.
 
 **Tool Call:**
@@ -182,7 +219,7 @@ The CREATE tool uses Amazon Q Business AI capabilities to generate new content b
 }
 ```
 
-## Configuration Files
+### Configuration Files
 
 - `deployment_config.env` - Main configuration file
 - `cdk/stack.py` - CDK infrastructure definition
@@ -193,26 +230,26 @@ The CREATE tool uses Amazon Q Business AI capabilities to generate new content b
   - `requirements.txt` - Python dependencies
   - `Dockerfile` - Container definition
 
-## Key Components
+### Key Components
 
-### Lambda Function
+#### Lambda Function
 - Handles MCP protocol requests
 - Integrates JWT authentication with Q Business
 - Supports both RETRIEVE and CREATE operations
 
-### CDK Stack
+#### CDK Stack
 - API Gateway with JWT authorizer
 - Lambda function with proper IAM roles
 - Docker image building and deployment
 
-### Authentication Scripts
+#### Authentication Scripts
 - `get_cognito_jwt.sh` - Initial token acquisition
 - `refresh_cognito_token.sh` - Token refresh
 - `test_mcp_integrated_auth.py` - End-to-end testing
 
-## Troubleshooting
+### Troubleshooting
 
-### CREATE Tool Not Working
+#### CREATE Tool Not Working
 If you get "CREATOR_MODE not enabled" error:
 ```bash
 # Check current configuration
@@ -224,10 +261,10 @@ aws qbusiness update-chat-controls-configuration \
   --creator-mode-configuration creatorModeControl=ENABLED
 ```
 
-### JWT Token Expired
+#### JWT Token Expired
 Get a new JWT token from your Cognito User Pool using your preferred method (AWS CLI, SDK, or application).
 
-### RETRIEVE Tool Access Denied / No Results
+#### RETRIEVE Tool Access Denied / No Results
 If the RETRIEVE tool returns access denied errors or no results when you expect content to be available, this is likely due to ACL (Access Control Lists) being enabled in the Confluence data source:
 
 **Problem**: The Amazon Q Business Requirements Analysis pattern deploys with `isCrawlAcl: true` by default, which restricts content access based on Confluence permissions.
@@ -245,23 +282,23 @@ additionalProperties: {
 
 **Important**: This requires redeploying the entire Amazon Q Business Requirements Analysis pattern as data source configurations cannot be modified after deployment.
 
-### Lambda Deployment Issues
+#### Lambda Deployment Issues
 ```bash
 # Rebuild and redeploy
 cd cdk
 ./deploy.sh
 ```
 
-## Security Features
+### Security Features
 
 - JWT token validation in Lambda
 - SigV4 request signing for API Gateway
 - IAM roles with least privilege access
 - Secure token storage and refresh mechanisms
 
-## Development
+### Development
 
-### Local Testing
+#### Local Testing
 ```bash
 # Activate virtual environment
 source mcp-test-env/bin/activate
@@ -270,14 +307,14 @@ source mcp-test-env/bin/activate
 python3 test_mcp_integrated_auth.py your-username your-password
 ```
 
-### Updating Lambda Code
+#### Updating Lambda Code
 ```bash
 # After code changes, redeploy
 cd cdk
 cdk deploy
 ```
 
-## Production Considerations
+### Production Considerations
 
 - Monitor Lambda function logs in CloudWatch
 - Set up proper alerting for authentication failures
