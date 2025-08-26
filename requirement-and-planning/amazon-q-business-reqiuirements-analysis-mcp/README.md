@@ -12,7 +12,7 @@ A Model Context Protocol (MCP) server that provides secure access to Amazon Q Bu
 - **Secure Architecture**: Lambda-based MCP server with proper IAM permissions
 - **Production Ready**: CDK infrastructure with Docker containerization
 
-## 2. Solution Architecture (with steps explanation)
+## 2. Solution Architecture
 
 ![Architecture Diagram](image/qmcp.jpg)
 
@@ -125,28 +125,6 @@ The MCP server provides two main tools for interacting with Amazon Q Business:
 - **Capabilities**: Create user stories, technical specifications, acceptance criteria, test cases, project plans, and other documentation
 - **Tool Name**: `mcp_amazon_q_business_create`
 - **Requirement**: CREATOR_MODE must be enabled in your Q Business application
-
-### Usage Examples
-
-#### Example 1: Retrieving Information
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "mcp_amazon_q_business_retrieve",
-    "arguments": {
-      "message": "What are the authentication requirements in our documentation?"
-    }
-  },
-  "id": 1
-}
-```
-
-#### Example 2: Creating Content
-```json
-{
-  "
 
 ### Authentication Requirements
 

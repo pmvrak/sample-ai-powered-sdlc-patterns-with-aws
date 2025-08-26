@@ -12,7 +12,7 @@ The MCP server provides 4 core tools for AWS architecture design:
 - **Generate Architecture Code**: Generate Infrastructure as Code templates
 - **Analyze Architecture**: Analyze architectures against AWS best practices
 
-## 2. Solution Architecture (with steps explanation)
+## 2. Solution Architecture
 
 ### System Architecture
 
