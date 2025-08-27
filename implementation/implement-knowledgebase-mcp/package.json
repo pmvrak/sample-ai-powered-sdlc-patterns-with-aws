@@ -1,0 +1,92 @@
+{
+  "name": "project-kb-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for accessing project knowledge bases via OpenSearch with AWS Cognito authentication",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "project-kb-mcp-server": "./dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "opensearch",
+    "aws-cognito",
+    "knowledge-base",
+    "search",
+    "kiro"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/project-kb-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/project-kb-mcp-server/issues"
+  },
+  "homepage": "https://github.com/your-username/project-kb-mcp-server#readme",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --run --coverage",
+    "test:security": "npm run test -- --testNamePattern=\"sanitization|secure-logger\"",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "postbuild": "chmod +x dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "security:scan": "semgrep --config=auto src/",
+    "security:audit": "npm audit --audit-level=moderate",
+    "security:check": "npm run security:scan && npm run security:audit && npm run test:security",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test && npm run build",
+    "docker:build": "docker build -t project-kb-mcp-server .",
+    "docker:run": "docker run --env-file .env -p 3000:3000 project-kb-mcp-server",
+    "docker:push": "docker push project-kb-mcp-server",
+    "deploy:staging": "./scripts/deploy-staging.sh",
+    "deploy:production": "./scripts/deploy-production.sh",
+    "health-check": "node dist/index.js --health-check"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.856.0",
+    "@aws-sdk/client-cognito-identity": "^3.857.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.0.0",
+    "@aws-sdk/client-opensearch": "^3.0.0",
+    "@modelcontextprotocol/sdk": "^1.17.1",
+    "@opensearch-project/opensearch": "^2.0.0",
+    "aws4": "^1.12.0",
+    "dotenv": "^17.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/aws4": "^1.11.0",
+    "@types/node": "^20.0.0",
+    "@types/winston": "^2.4.4",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

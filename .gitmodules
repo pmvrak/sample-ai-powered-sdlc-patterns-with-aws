@@ -1,0 +1,3 @@
+[submodule "operation-and-maintenance/maintain-incidentmanagement/mcp/pagerduty-mcp-server"]
+	path = operation-and-maintenance/maintain-incidentmanagement/mcp/pagerduty-mcp-server
+	url = https://github.com/PagerDuty/pagerduty-mcp-server.git
