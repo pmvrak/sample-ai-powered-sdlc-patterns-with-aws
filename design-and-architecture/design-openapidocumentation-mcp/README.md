@@ -82,30 +82,70 @@ mcp-openapi-documentation/
 │   ├── 🛠️ Three main MCP tools
 │   ├── 🐳 Docker containerization
 │   └── 🧪 Development and testing scripts
+│   └── 📖 [README.md](mcp-server/README.md) - Server setup and RunPod deployment
 ├── 📂 cdk/                       # AWS CDK infrastructure
 │   ├── 🏗️ ECS Fargate deployment
 │   ├── 🔄 Application Load Balancer
 │   ├── 📋 VPC and networking setup
-│   └── 📊 OpenSearch vector index setup
+│   ├── 📊 OpenSearch vector index setup
+│   └── 📖 [README.md](cdk/README.md) - Infrastructure deployment and configuration
 ├── 📂 doc-gen-lambda/            # Documentation generation service
 ├── 📂 domain-analyzer-lambda/    # Domain analysis service
 ├── 📂 shared/                    # Shared utilities and types
-└── 📜 deploy-all.sh              # Main deployment script
+│   └── 📖 [README.md](shared/README.md) - JWT authentication middleware
+├── 📜 deploy-all.sh              # Main deployment script
+└── 📖 [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Comprehensive deployment guide
 ```
 
-## 🚀 Prerequisites
+### 📚 Documentation Index
+
+| Component | Purpose | Documentation |
+|-----------|---------|---------------|
+| **Main Project** | Overview and quick start | This README |
+| **MCP Server** | Server implementation and RunPod deployment | [mcp-server/README.md](mcp-server/README.md) |
+| **Infrastructure** | AWS CDK deployment and configuration | [cdk/README.md](cdk/README.md) |
+| **Authentication** | JWT middleware for Lambda functions | [shared/README.md](shared/README.md) |
+| **Deployment** | Step-by-step deployment instructions | [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) |
+
+### 🔗 Component Integration
+
+The project components work together as follows:
+
+1. **[MCP Server](mcp-server/README.md)** - The main HTTP server that implements the MCP protocol and can be deployed either locally with Docker/Podman or on RunPod for cloud hosting
+2. **[CDK Infrastructure](cdk/README.md)** - AWS deployment infrastructure that creates ECS services, Lambda functions, and all supporting AWS resources with comprehensive environment variable configuration
+3. **[Shared Authentication](shared/README.md)** - JWT middleware used by Lambda functions to authenticate requests using AWS Cognito, ensuring secure access to backend services
+4. **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Orchestrates the entire deployment process, from AWS infrastructure setup to MCP server configuration
+
+**Deployment Flow**: Start with the [Deployment Guide](DEPLOYMENT_GUIDE.md) → Configure infrastructure with [CDK](cdk/README.md) → Deploy [MCP Server](mcp-server/README.md) → Lambda functions use [Shared Auth](shared/README.md)
+
+## 📋 Prerequisites
 
 - **Node.js**: 18+ (for MCP server development)
-- **AWS CLI**: v2+ (for deployment)
-- **AWS CDK**: v2+ (for infrastructure)
+- **AWS CLI**: v2+ (for deployment) - run `aws configure` first
+- **AWS CDK**: v2+ (for infrastructure) - install with `npm install -g aws-cdk`
 - **Docker**: For container building and deployment (or Podman)
 - **jq**: Recommended for JSON manipulation (optional)
 
-## 🚀 Deployment Instructions
+## 🚀 Deployment
 
-**Deploy MCP Server to AWS:**
+### Quick start
+
+**The easiest way to deploy everything:**
+
 ```bash
-# Deploy with your IP allowed for ALB access
+# Deploy with access from your current IP (recommended)
+./deploy-all.sh --my-ip
+
+# OR deploy with public access (⚠️ less secure)
+./deploy-all.sh --allowed-ips "0.0.0.0/0"
+```
+
+> **⚠️ Security Note**: Running `./deploy-all.sh` without IP restrictions will make your ALB **inaccessible**. You must specify either `--my-ip` or `--allowed-ips` for the server to be reachable.
+
+### 🛠️ Advanced Deployment Options
+
+```bash
+# Basic deployment (most common)
 ./deploy-all.sh --my-ip
 
 # Deploy with specific IP restrictions
@@ -114,20 +154,31 @@ mcp-openapi-documentation/
 # Deploy with HTTPS using existing certificate
 ./deploy-all.sh --my-ip --certificate-arn "arn:aws:acm:region:account:certificate/cert-id"
 
-# Deploy only the MCP server stack (skip other stacks)
+# Deploy only the MCP server stack (if other stacks already exist)
 ./deploy-all.sh --my-ip --mcp-server-only
 
-# Skip Docker image build and push step
-./deploy-all.sh --my-ip --skip-image-push
-
-# Specify the number of ECS tasks to run
+# Deploy multiple ECS tasks for high availability
 ./deploy-all.sh --my-ip --desired-count 2
-
-# Don't wait for ECS service to be stable
-./deploy-all.sh --my-ip --no-wait
 ```
 
-**Local Development:**
+### Optional: Environment Configuration
+
+You can optionally create a `.env` file in the `cdk/` directory to set deployment defaults:
+
+```bash
+# Create optional deployment configuration
+cd cdk
+cat > .env << EOF
+AWS_REGION=us-east-1
+CDK_DEFAULT_REGION=us-east-1
+EOF
+cd ..
+```
+
+**Note**: Command-line arguments will override any values set in the `.env` file.
+
+### Local Development
+
 ```bash
 cd mcp-server
 
@@ -141,7 +192,8 @@ cd mcp-server
 ./scripts/podman-dev.sh test
 ```
 
-**Build and Push Docker Image:**
+### Manual Docker Image Management
+
 ```bash
 # Build and push to ECR (after MCP Server Stack is deployed)
 ./push-to-ecr.sh --force-build
@@ -152,6 +204,20 @@ cd mcp-server
 # Build for a specific platform
 ./push-to-ecr.sh --platform linux/amd64
 ```
+
+### 🔧 Quick Troubleshooting
+
+**Common Issues:**
+
+| Problem | Solution |
+|---------|----------|
+| `AWS credentials not configured` | Run `aws configure` and enter your credentials |
+| `CDK is not installed` | Run `npm install -g aws-cdk` |
+| `Docker not found` | Install Docker or use `--skip-image-push` flag |
+| `Permission denied` | Make sure script is executable: `chmod +x deploy-all.sh` |
+| `ALB inaccessible` | Check your IP with `curl https://checkip.amazonaws.com` and redeploy with `--allowed-ips "YOUR_IP/32"` or use `--allowed-ips "0.0.0.0/0"` for public access |
+
+**Need help?** Check the detailed [Deployment Guide](DEPLOYMENT_GUIDE.md) or component-specific READMEs.
 
 ### Deployment Process
 
