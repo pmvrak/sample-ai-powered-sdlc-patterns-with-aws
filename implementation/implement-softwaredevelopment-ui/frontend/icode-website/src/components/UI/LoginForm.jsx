@@ -93,7 +93,7 @@ export const LoginForm = ({ onSuccess, onSwitchToSignUp }) => {
       <form onSubmit={handleSubmit} className="login-form__form">
         <div className="form-group">
           <label htmlFor="username" className="form-label">
-            Username or Email
+            Username
           </label>
           <input
             type="text"
@@ -102,7 +102,7 @@ export const LoginForm = ({ onSuccess, onSwitchToSignUp }) => {
             value={formData.username}
             onChange={handleInputChange}
             className={`form-input ${formErrors.username ? 'form-input--error' : ''}`}
-            placeholder="Enter your username or email"
+            placeholder="Enter your username"
             disabled={loading}
             autoComplete="username"
           />
