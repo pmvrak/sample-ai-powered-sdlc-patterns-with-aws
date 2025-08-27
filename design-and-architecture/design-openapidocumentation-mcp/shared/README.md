@@ -2,6 +2,13 @@
 
 This module provides JWT validation middleware for AWS Lambda functions using AWS Cognito authentication.
 
+## 📚 Related Documentation
+
+- **[Main Project README](../README.md)** - Project overview and architecture
+- **[CDK Infrastructure README](../cdk/README.md)** - AWS deployment and Cognito setup
+- **[MCP Server README](../mcp-server/README.md)** - Server implementation details
+- **[Deployment Guide](../DEPLOYMENT_GUIDE.md)** - Complete deployment process
+
 ## Features
 
 - JWT token validation using Cognito public keys
@@ -234,6 +241,15 @@ Enable debug logging by setting the environment variable:
 ```bash
 DEBUG=auth-middleware
 ```
+
+## Integration with Project Components
+
+This authentication middleware is used by the Lambda functions in the OpenAPI MCP project:
+
+- **Domain Analyzer Lambda** (`../domain-analyzer-lambda/`) - Uses this middleware to authenticate domain analysis requests
+- **Documentation Generator Lambda** (`../doc-gen-lambda/`) - Uses this middleware to authenticate documentation generation requests
+- **CDK Deployment** - The [CDK infrastructure](../cdk/README.md) automatically configures the required Cognito User Pool and environment variables
+- **MCP Server** - The [MCP server](../mcp-server/README.md) calls these authenticated Lambda functions through AWS SDK
 
 ## License
 

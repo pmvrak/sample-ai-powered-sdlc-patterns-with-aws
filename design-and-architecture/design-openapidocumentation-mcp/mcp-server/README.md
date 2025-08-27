@@ -2,6 +2,13 @@
 
 A lightweight MCP (Model Context Protocol) server that wraps existing OpenAPI documentation Lambda functions.
 
+## 📚 Related Documentation
+
+- **[Main Project README](../README.md)** - Project overview and architecture
+- **[CDK Infrastructure README](../cdk/README.md)** - AWS deployment and configuration
+- **[Authentication README](../shared/README.md)** - JWT middleware for Lambda functions
+- **[Deployment Guide](../DEPLOYMENT_GUIDE.md)** - Step-by-step deployment instructions
+
 ## Features
 
 - MCP protocol compliance using TypeScript SDK
@@ -129,6 +136,8 @@ The server is configured via environment variables:
 - `BEDROCK_REGION`: Bedrock service region
 - `MODEL_ID`: Bedrock model ID
 - `LOG_LEVEL`: Logging level (error/warn/info/debug)
+
+> **AWS Deployment**: For complete environment variable configuration when deploying to AWS, see the [CDK Infrastructure README](../cdk/README.md) which includes all available configuration options and deployment-specific settings.
 
 ## MCP Tools
 

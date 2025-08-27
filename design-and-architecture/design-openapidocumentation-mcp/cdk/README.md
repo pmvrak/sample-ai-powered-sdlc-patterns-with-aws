@@ -2,6 +2,13 @@
 
 This directory contains the AWS CDK infrastructure code for deploying the OpenAPI Documentation MCP Server.
 
+## 📚 Related Documentation
+
+- **[Main Project README](../README.md)** - Project overview and quick start
+- **[MCP Server README](../mcp-server/README.md)** - Server implementation and RunPod deployment
+- **[Authentication README](../shared/README.md)** - JWT middleware for Lambda functions
+- **[Deployment Guide](../DEPLOYMENT_GUIDE.md)** - Comprehensive deployment instructions
+
 ## Environment Variables Configuration
 
 The CDK stacks now support configuration through environment variables instead of hardcoded values. This makes the deployment more flexible and secure.
@@ -47,6 +54,8 @@ The CDK stacks now support configuration through environment variables instead o
 - `LOG_LEVEL`: Logging level (default: info)
 - `HEALTH_CHECK_ENABLED`: Enable health checks (default: true)
 - `ENABLE_REQUEST_LOGGING`: Enable request logging (default: true)
+
+> **Note**: For Lambda function authentication, see the [JWT Authentication Middleware documentation](../shared/README.md) which provides Cognito-based authentication for the backend services.
 
 ### Deployment
 
@@ -108,3 +117,11 @@ cdk deploy BedrockStack
 cdk deploy LambdaStack
 cdk deploy McpServerStack --context allowedIps="YOUR_IP/32"
 ```
+
+## Next Steps
+
+After deploying the infrastructure:
+
+1. **Configure MCP Server** - Follow the [MCP Server README](../mcp-server/README.md) to set up the server locally or on RunPod
+2. **Test Authentication** - The Lambda functions will use the [JWT middleware](../shared/README.md) for secure authentication
+3. **Complete Deployment** - Use the main [deployment script](../deploy-all.sh) or follow the [Deployment Guide](../DEPLOYMENT_GUIDE.md) for the full process

@@ -363,9 +363,36 @@ deploy_bedrock_stack() {
     print_success "Bedrock stack deployed!"
 }
 
+# Function to install Lambda dependencies
+install_lambda_dependencies() {
+    print_status "Installing Lambda function dependencies..."
+    
+    # Install domain analyzer Lambda dependencies
+    if [ -d "$SCRIPT_DIR/domain-analyzer-lambda" ]; then
+        print_status "Installing domain analyzer Lambda dependencies..."
+        cd "$SCRIPT_DIR/domain-analyzer-lambda"
+        npm install
+        print_success "Domain analyzer dependencies installed!"
+    fi
+    
+    # Install doc generator Lambda dependencies
+    if [ -d "$SCRIPT_DIR/doc-gen-lambda" ]; then
+        print_status "Installing doc generator Lambda dependencies..."
+        cd "$SCRIPT_DIR/doc-gen-lambda"
+        npm install
+        print_success "Doc generator dependencies installed!"
+    fi
+    
+    # Navigate back to the original directory
+    cd - > /dev/null
+}
+
 # Function to deploy Lambda stack
 deploy_lambda_stack() {
     print_status "Deploying Lambda API stack..."
+    
+    # Install Lambda dependencies first
+    install_lambda_dependencies
     
     # Navigate to CDK directory
     cd "$CDK_DIR"
