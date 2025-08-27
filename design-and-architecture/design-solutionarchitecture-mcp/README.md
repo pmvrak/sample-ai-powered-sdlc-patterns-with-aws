@@ -4,8 +4,6 @@
 
 A comprehensive Model Context Protocol (MCP) server that provides AI-powered AWS architecture design tools. Generate diagrams, analyze architectures, create infrastructure code, and get expert AWS guidance - all through a secure, authenticated API.
 
-![MCP Server Architecture](img/designandarchmcpserver.jpg)
-
 The MCP server provides 4 core tools for AWS architecture design:
 - **Query AWS Knowledge**: Get expert guidance from the AWS Well-Architected Framework
 - **Create Architecture Diagram**: Generate visual AWS architecture diagrams as PNG images

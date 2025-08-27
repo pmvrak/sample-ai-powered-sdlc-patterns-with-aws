@@ -31,14 +31,12 @@ logger = logging.getLogger(__name__)
 try:
     # Try direct imports first (when files are in same directory)
     import amazon_q_jsonrpc_server
-    import atlassian_integration
     logger.info("Successfully imported modules using direct imports")
 except ImportError as e1:
     logger.error(f"Failed direct imports: {e1}")
     try:
         # Try relative imports (when used as a package)
         from . import amazon_q_jsonrpc_server
-        from . import atlassian_integration
         logger.info("Successfully imported modules using relative imports")
     except ImportError as e2:
         logger.error(f"Failed relative imports too: {e2}")
@@ -50,7 +48,6 @@ except ImportError as e1:
             sys.path.insert(0, current_dir)
         try:
             import amazon_q_jsonrpc_server
-            import atlassian_integration
             logger.info("Successfully imported modules after adding current directory to path")
         except ImportError as e3:
             logger.error(f"All import attempts failed: {e3}")
