@@ -57,6 +57,14 @@ The application deploys on AWS using:
 - AWS CDK (`npm install -g aws-cdk`)
 - Docker for container builds
 
+### AWS Configuration
+
+**Configure your AWS credentials first:**
+
+```bash
+aws configure
+```
+
 ### AWS Permissions
 Your AWS account needs permissions for:
 - CloudFormation, ECS, ECR, ALB
@@ -86,33 +94,89 @@ aws bedrock list-inference-profiles --region us-east-1 --query 'inferenceProfile
 
 ## Deployment instructions
 
+### SSL Certificate Setup (REQUIRED)
+
+**Complete this step BEFORE running the Quick Start deployment.**
+
+HTTPS is mandatory for security compliance. Choose one of the following options:
+
+#### **Option 1: Production Certificate (Recommended)**
+
+**For production use with a real domain:**
+
+1. **Get a domain** from any registrar (Route 53, GoDaddy, Namecheap, Cloudflare, etc.)
+
+2. **Request SSL certificate in AWS Certificate Manager:**
+   - Go to AWS Console → Certificate Manager → Request Certificate
+   - Enter your domain name (e.g., `myapp.example.com`)
+   - Choose DNS validation
+   - Add the provided CNAME record to your domain's DNS settings
+   - Wait for validation (usually a few minutes)
+
+3. **Import existing certificate** (if you already have one):
+   ```bash
+   aws acm import-certificate \
+     --certificate fileb://certificate.crt \
+     --private-key fileb://private.key \
+     --certificate-chain fileb://chain.crt \
+     --region us-east-1
+   ```
+
+4. **Get certificate ARN:**
+   ```bash
+   aws acm list-certificates --region us-east-1
+   # Copy the ARN to your .env file
+   ```
+
+#### **Option 2: Self-Signed Certificate (Development Only)**
+
+**For testing and development:**
+
+```bash
+# Generate self-signed certificate
+openssl req -x509 -newkey rsa:2048 -keyout private.key -out certificate.crt -days 365 -nodes \
+  -subj "/C=US/ST=State/L=City/O=Company/CN=localhost"
+
+# Import to ACM
+aws acm import-certificate \
+  --certificate fileb://certificate.crt \
+  --private-key fileb://private.key \
+  --region us-east-1
+
+# Get the certificate ARN
+aws acm list-certificates --region us-east-1
+# Copy the ARN to your .env file
+```
+
+**Note**: Self-signed certificates will show security warnings in browsers but work for development.
+
 ### Quick Start
+
+**Prerequisites**: Complete SSL Certificate Setup above first.
 
 ```bash
 # Clone and navigate to repository
 git clone <repository-url>
-cd mcp-client-ui
-
-# Configure AWS credentials
-aws configure
+cd implement-softwaredevelopment-ui
 
 # Set up environment variables
 cd cdk
 cp .env.example .env
+```
+Edit the `.env` file and replace the required variables with your corresponding values:
 
-# Get your AWS account and IP
-export AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
-export MY_IP=$(curl http://httpbin.org/ip)
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `CDK_DEFAULT_ACCOUNT` | ✅ | AWS Account ID | `123456789012` |
+| `CDK_DEFAULT_REGION` | ✅ | AWS Region | `us-east-1` |
+| `ALLOWED_IP_ADDRESS` | ✅ | Your IP for ALB access | `1.2.3.4/32` |
+| `CERTIFICATE_ARN` | ✅ | ACM certificate ARN for HTTPS | `arn:aws:acm:region:account:certificate/cert-id` |
+| `CLAUDE_MODEL_ID` | ✅ | Claude model identifier | `us.anthropic.claude-3-7-sonnet-20250219-v1:0` |
+| `DOMAIN_NAME` | ❌ | Custom domain name | `myapp.example.com` |
+| `MCP_SERVER_URLS` | ❌ | MCP server endpoints | `https://abc.lambda-url.us-east-1.on.aws/` |
+| `BEDROCK_KNOWLEDGE_BASE_ID` | ❌ | Knowledge Base ID | `ABCD1234EF` |
 
-# Configure .env file (you'll need to add CERTIFICATE_ARN after creating SSL certificate)
-echo "CDK_DEFAULT_ACCOUNT=$AWS_ACCOUNT
-CDK_DEFAULT_REGION=us-east-1
-ALLOWED_IP_ADDRESS=$MY_IP/32
-CERTIFICATE_ARN=your-certificate-arn-here
-CLAUDE_MODEL_ID=us.anthropic.claude-3-7-sonnet-20250219-v1:0
-ECR_REPOSITORY_NAME=icode-fullstack
-IMAGE_TAG=latest" > .env
-
+```bash
 # Deploy the stack
 cd ..
 ./deploy.sh
@@ -125,74 +189,42 @@ The deployment script will:
 4. Configure IAM permissions
 5. Provide access URLs and credentials
 
-### SSL Certificate Setup (REQUIRED)
+### Next Steps: Enhance with Knowledge Base and MCP Capabilities
 
-HTTPS is mandatory for security compliance. You need an SSL certificate imported into AWS Certificate Manager (ACM).
+#### Knowledge Base Setup
 
-#### **Option 1: AWS Certificate Manager (Recommended)**
+For enhanced AI capabilities with document retrieval:
 
-**For domains from any registrar (Route 53, GoDaddy, Namecheap, etc.):**
-
-1. **Own a domain** from any registrar:
-   - AWS Route 53: `aws.amazon.com/route53`
-   - GoDaddy: `godaddy.com`
-   - Namecheap: `namecheap.com`
-   - Cloudflare: `cloudflare.com`
-
-2. **Request free SSL certificate in AWS Console:**
-   ```bash
-   # Via AWS Console: Certificate Manager → Request Certificate
-   # Or via CLI:
-   aws acm request-certificate \
-     --domain-name your-domain.com \
-     --validation-method DNS \
-     --region us-east-1
-   ```
-
-3. **Validate domain ownership:**
-   - Add DNS CNAME record provided by AWS to your domain's DNS settings
-   - Works with any registrar's DNS management
-
-4. **Get certificate ARN:**
-   ```bash
-   aws acm list-certificates --region us-east-1
-   # Copy ARN to your .env file
-   ```
-
-#### **Option 2: Import Existing Certificate**
-
-**For certificates from any Certificate Authority:**
-
+1. **Get your S3 bucket name:**
 ```bash
-# Import certificate from GoDaddy, Let's Encrypt, etc.
-aws acm import-certificate \
-  --certificate fileb://certificate.crt \
-  --private-key fileb://private.key \
-  --certificate-chain fileb://chain.crt \
-  --region us-east-1
+aws cloudformation describe-stacks --stack-name ICodeStack --query 'Stacks[0].Outputs[?OutputKey==`S3BucketName`].OutputValue' --output text
 ```
 
-#### **Option 3: Self-Signed Certificate (Development)**
+2. **Create Knowledge Base in AWS Bedrock Console:**
+   - Go to **AWS Bedrock Console** → **Knowledge bases** → **Create knowledge base**
+   - **Data source**: Choose S3, use your bucket name from step 1
+   - **S3 prefix**: Set to `projects/` to use project documents
+   - **Embeddings model**: Choose Titan Text Embeddings v2 or Cohere Embed
+   - **Vector database**: Choose Amazon S3 (native vector support at scale)
+   - **Note the Knowledge Base ID and Data Source ID** after creation
 
+3. **Configure your application:**
 ```bash
-# Generate self-signed certificate
-openssl req -x509 -newkey rsa:2048 -keyout private.key -out certificate.crt -days 365 -nodes \
-  -subj "/C=US/ST=State/L=City/O=Company/CN=your-domain.com"
-
-# Import to ACM
-aws acm import-certificate \
-  --certificate fileb://certificate.crt \
-  --private-key fileb://private.key \
-  --region us-east-1
+./configure-kb.sh <KNOWLEDGE_BASE_ID> <DATA_SOURCE_ID>
 ```
 
-### MCP Server Integration (Optional)
+#### MCP Server Integration
 
 To add MCP (Model Context Protocol) servers for enhanced capabilities:
 
-1. **Configure mcp_servers.json** with your actual endpoints:
+1. **Deploy MCP servers** using AWS samples:
+   - [OpenAPI Documentation MCP](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main/design-and-architecture/design-openapidocumentation-mcp)
+   - [Architecture Design MCP](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main/design-and-architecture/Architecture-designer)
+   - [Other AI-Powered SDLC Patterns](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws)
 
-   The repository includes a `mcp_servers.json` file with sample URLs that you need to replace with your actual MCP server endpoints:
+2. **Configure mcp_servers.json** with your actual endpoints:
+
+   After deploying the MCP servers above, update the `mcp_servers.json` file with your actual MCP server endpoints:
 
    ```bash
    # Edit mcp_servers.json and replace sample URLs with your actual endpoints:
@@ -224,56 +256,17 @@ To add MCP (Model Context Protocol) servers for enhanced capabilities:
    }
    ```
 
-2. **Deploy MCP servers** using AWS samples:
-   - [OpenAPI Documentation MCP](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main/design-and-architecture/design-openapidocumentation-mcp)
-   - [Architecture Design MCP](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main/design-and-architecture/Architecture-designer)
-   - [Other AI-Powered SDLC Patterns](https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws)
-
-3. **Set environment variable** (optional, for additional servers):
+3. **Add to .env file** (optional, for additional servers):
    ```bash
-   export MCP_SERVER_URLS="https://your-additional-mcp-server.lambda-url.us-east-1.on.aws/"
+   # Add this line to your cdk/.env file:
+   MCP_SERVER_URLS=https://your-additional-mcp-server.lambda-url.us-east-1.on.aws/
    ```
 
    **Important**: Update the placeholder URLs in `mcp_servers.json` with your actual MCP server endpoints before deployment. The sample URLs are provided as templates and will not work without your actual AWS resources.
 
-### Configuration
 
-### Environment Variables
-
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `CDK_DEFAULT_ACCOUNT` | ✅ | AWS Account ID | `123456789012` |
-| `CDK_DEFAULT_REGION` | ✅ | AWS Region | `us-east-1` |
-| `ALLOWED_IP_ADDRESS` | ✅ | Your IP for ALB access | `1.2.3.4/32` |
-| `CERTIFICATE_ARN` | ✅ | ACM certificate ARN for HTTPS | `arn:aws:acm:region:account:certificate/cert-id` |
-| `CLAUDE_MODEL_ID` | ✅ | Claude model identifier | `us.anthropic.claude-3-7-sonnet-20250219-v1:0` |
-| `DOMAIN_NAME` | ❌ | Custom domain name | `myapp.example.com` |
-| `MCP_SERVER_URLS` | ❌ | MCP server endpoints | `https://abc.lambda-url.us-east-1.on.aws/` |
-| `BEDROCK_KNOWLEDGE_BASE_ID` | ❌ | Knowledge Base ID | `ABCD1234EF` |
 
 ### Post-Deployment Setup
-
-#### Knowledge Base Setup (Optional)
-
-For enhanced AI capabilities with document retrieval:
-
-1. **Get your S3 bucket name:**
-```bash
-aws cloudformation describe-stacks --stack-name ICodeStack --query 'Stacks[0].Outputs[?OutputKey==`S3BucketName`].OutputValue' --output text
-```
-
-2. **Create Knowledge Base in AWS Bedrock Console:**
-   - Go to **AWS Bedrock Console** → **Knowledge bases** → **Create knowledge base**
-   - **Data source**: Choose S3, use your bucket name from step 1
-   - **S3 prefix**: Set to `projects/` to use project documents
-   - **Embeddings model**: Choose Titan Text Embeddings v2 or Cohere Embed
-   - **Vector database**: Choose Amazon S3 (native vector support at scale)
-   - **Note the Knowledge Base ID and Data Source ID** after creation
-
-3. **Configure your application:**
-```bash
-./configure-kb.sh <KNOWLEDGE_BASE_ID> <DATA_SOURCE_ID>
-```
 
 ### Security Features
 
