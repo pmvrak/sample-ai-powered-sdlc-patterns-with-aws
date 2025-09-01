@@ -266,7 +266,78 @@ To add MCP (Model Context Protocol) servers for enhanced capabilities:
 
 
 
+### 🚀 Getting Started - User Guide
+
+After successful deployment, follow these steps to start using the AI-powered development platform:
+
+#### Step 1: Sign Up and Login
+
+1. **Navigate to your deployed application** using the ALB DNS URL from deployment output
+2. **Click "Sign Up"** to create a new account
+3. **Login** with your credentials
+
+#### Step 2: Navigate to Projects
+
+1. **Click "Projects"** in the top navigation bar
+2. **Create a new project** or select an existing one
+3. **Start your AI-powered development workflow**
+
+#### Step 3: Try These Example Prompts
+
+Copy and paste these prompts to experience the platform's capabilities:
+
+##### 📋 Requirements Phase (30 seconds)
+```
+Extract information available from my confluence page and create epics with story points
+```
+
+```
+Create acceptance criteria for each Book Catalog Management Epic using Given/When/Then format. Include all success and error scenarios.
+```
+
+##### 🎨 Design Phase (1-5 minutes)
+```
+generate design diagram for the Book Catalog Management Epic
+```
+
+```
+generate open api spec code file for Book Catalog Management Epic
+```
+
+```
+generate infrastructure code for Book Catalog Management Epic
+```
+
+```
+do domain analysis of Book Catalog Management Epic
+```
+
+```
+give architecture analysis of Book Catalog Management Epic
+```
+
+```
+generate documentation for Book Catalog Management System using domain analysis tool
+```
+
+#### Expected Response Times
+- **Requirements extraction**: ~30 seconds
+- **Acceptance criteria generation**: ~30 seconds  
+- **Design diagrams**: ~1 minute
+- **Code generation**: 3-5 minutes
+- **Domain analysis**: ~30 seconds
+- **Architecture analysis**: ~30 seconds
+- **Documentation generation**: ~1 minute
+
+
+#### Troubleshooting
+- If prompts don't work initially, ensure your MCP servers are properly configured
+- Check that your Confluence integration is set up if using Confluence-related prompts
+- Verify your AWS Bedrock model access is enabled
+- Review CloudWatch logs for any errors
+
 ### Post-Deployment Setup
+
 
 ### Security Features
 
