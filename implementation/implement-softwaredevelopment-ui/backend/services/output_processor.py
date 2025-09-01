@@ -124,9 +124,13 @@ class OutputProcessor:
                 if tools_used:
                     self.logger.info(f"Tools that were used: {tools_used}")
             
-            # Extract epic information ONLY when mcp_amazon_q_business_retrieve tool was actually used
-            if tools_used and 'mcp_amazon_q_business_retrieve' in tools_used:
-                self.logger.info("mcp_amazon_q_business_retrieve tool was used - extracting epics from response")
+            # Extract epic information ONLY when Amazon Q Business tools were actually used
+            amazon_q_tools = ['mcp_amazon_q_business_retrieve', 'mcp_amazon_q_business_create']
+            amazon_q_tool_used = any(tool in tools_used for tool in amazon_q_tools) if tools_used else False
+            
+            if amazon_q_tool_used:
+                used_tool = next((tool for tool in amazon_q_tools if tool in tools_used), 'mcp_amazon_q_business_retrieve')
+                self.logger.info(f"{used_tool} tool was used - extracting epics from response")
                 
                 # First, try to parse any JSON tool results in the response and format them properly
                 formatted_response = self._format_amazon_q_response(ai_response)
@@ -139,9 +143,9 @@ class OutputProcessor:
                     processed_outputs['epics'] = epics
                     processed_outputs['jira_data_updated'] = True
                 else:
-                    self.logger.warning("mcp_amazon_q_business_retrieve tool was used but no epics were extracted from response")
+                    self.logger.warning(f"{used_tool} tool was used but no epics were extracted from response")
             else:
-                self.logger.info("mcp_amazon_q_business_retrieve tool was not used - skipping epic extraction")
+                self.logger.info("No Amazon Q Business tools were used - skipping epic extraction")
             
             # Only log if something was processed
             total_processed = len(processed_outputs['diagrams']) + len(processed_outputs['code_files']) + len(processed_outputs['documents'])
