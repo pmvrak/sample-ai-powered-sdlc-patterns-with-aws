@@ -10,9 +10,9 @@ Let's explore how we can leverage Amazon Bedrock's Generative AI capabilities to
 * AWS CodePipeline
 * Amazon Inspector
 * Amazon Bedrock for AI-powered assistance and automation
-* AWS CloudWatch
+* Amazon CloudWatch
 * AWS IAM
-
+* Amazon SNS
 
 ## 2. Solution Architecture
 
@@ -26,7 +26,7 @@ The pipeline integrates multiple security and quality gates including SAST analy
   * Developers use AWS CDK for infrastructure as code(IaC). 
   * Amazon Q Developer can be used as part of Local development as it provides real-time secure coding assistance and best practices.
 
-* **Security Scanning & Quality Analysis** -  Amazon  assists in analyzing security patterns and providing remediation suggestions. In this pattern we have integrated  analysis in below stages(as an example), but can be integrated in other cnfigured stages as well.
+* **Security Scanning & Quality Analysis** -  Amazon Bedrock assists in analyzing security patterns and providing remediation suggestions. In this pattern we have integrated  analysis in below stages(as an example), but can be integrated in other cnfigured stages as well.
   * Code quality analysis
   * Security scan
   * Software Bill of Materials (SBOM) generation
@@ -35,13 +35,13 @@ The pipeline integrates multiple security and quality gates including SAST analy
   * Automated Integration tests with AI-assisted test case generation
   * Code linting for consistency and security best practices
 
-* **Deployment Controls** - Amazon  helps validate the deployment and changes to take the decision to proceed or not-to-proceed with Deployment.
+* **Deployment Controls** - Amazon Bedrock helps validate the deployment and changes to take the decision to proceed or not-to-proceed with Deployment.
   * Deployment analysis for infrastructure security
   * Manual approval gates for critical environment promotions
 
 ## 3. Repository Structure
 ```
-deployment/pattern-deploy-devsecops-/
+deployment/deploy-devsecops-aws-codepipeline/
 └── cdk/                              # CDK application root
     ├── bin/                          # CDK entry point
     │   └── cdk-pipeline.ts           # Main pipeline definition
@@ -55,6 +55,7 @@ deployment/pattern-deploy-devsecops-/
     │   │       └── stages/          # Pipeline stage definitions
     │   └── stacks/                   # CDK stack definitions
     ├── test/                         # Test files
+    ├── scripts/                      # Amazon Bedrock helper scripts
     └── cdk.json                      # CDK configuration
 ```
 
@@ -65,7 +66,7 @@ This section outlines the CDK project structure for the DevSecOps pipeline imple
   - configs: for pipeline configuration settings
   - constructs/pipeline: for modular pipeline components including:
     - failure-handling: for automated failure analysis
-    - monitoring: for pipeline metrics and CloudWatch alarms
+    - monitoring: for pipeline metrics and Amazon CloudWatch alarms
     - projects: CodeBuild projects for various stages defined
     - stages: Various stages part of the Code Pipeline
   - stacks: contains the CDK stack definitions
@@ -80,12 +81,12 @@ In this pattern we have 2 CDK stacks
 - AWS CDK CLI v2.181.1 or later
 - AWS CLI v2 configured with appropriate credentials
 - AWS Account with permissions to create:
-  - CodePipeline
-  - CodeBuild projects
-  - Lambda functions
-  - CloudWatch resources
-  - IAM roles
-  - SNS topics
+  - AWS CodePipeline
+  - AWS CodeBuild projects
+  - AWS Lambda functions
+  - Amazon CloudWatch resources
+  - AWS IAM roles
+  - Amazon SNS topics
   - Amazon Bedrock model
 - A [Gitlab repository](https://docs.gitlab.com/user/project/repository/)
 - An [AWS Connection to Gitlab](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-gitlab.html)
@@ -105,7 +106,7 @@ In this pattern we have 2 CDK stacks
 1. Clone the repository:
     ```bash
     git clone <repository-url>
-    cd deployment/pattern-deploy-devsecops-bedrock/cdk
+    cd deployment/deploy-devsecops-aws-codepipeline/cdk
     ```
 
 2. Install dependencies:
@@ -123,7 +124,7 @@ In this pattern we have 2 CDK stacks
       - `source` is the Gitlab repo which contains this CDK code for the AWS CodePipeline
       - `source_app_code` is the Gitlab repo where your Application code resides
     - Name for the AWS CodePipeline
-    - Email ID for pipeline related notifications and Bedrock analysis reports
+    - Email ID for pipeline related notifications and Amazon Bedrock analysis reports
 
       ```typescript
       export const PipelineConfig = {
@@ -168,7 +169,7 @@ In this pattern we have 2 CDK stacks
 ## 6. Pipeline Features
 
 ### AI-Powered Analysis Scripts
-The pipeline includes several Bedrock-powered analysis scripts located in `cdk/scripts/`:
+The pipeline includes several Amazon Bedrock-powered analysis scripts located in `cdk/scripts/`:
 
 - **analyze-code-quality.js** - Analyzes code quality metrics and provides improvement suggestions
 - **analyze-deployment.js** - Evaluates deployment readiness and infrastructure security
@@ -190,7 +191,7 @@ The pipeline includes several Bedrock-powered analysis scripts located in `cdk/s
 8. **Deploy** - Automated deployment with approval gates
 
 ### Monitoring and Notifications
-- Real-time pipeline monitoring via CloudWatch
+- Real-time pipeline monitoring via Amazon CloudWatch
 - Email notifications for pipeline events
 - AI-generated failure analysis reports
 - Security findings prioritization and remediation guidance
@@ -211,7 +212,7 @@ Update `lib/configs/pipeline-config.ts` to customize:
 
 1. **Pipeline Failure Analysis**
    - Issue: Pipeline fails with unclear error messages
-   - Solution: Check CloudWatch Log Group `/aws/events/pipeline-failure-debug-*`
+   - Solution: Check Amazon CloudWatch Log Group `/aws/events/pipeline-failure-debug-*`
    - AI failure analysis sent to configured notification email
    - Review generated analysis in CodeBuild logs
 
@@ -285,7 +286,7 @@ aws logs describe-log-groups --log-group-name-prefix "/aws/codebuild/"
 - **Security**: Enable all security scans and review findings regularly
 - **Cost Optimization**: Monitor Amazon Bedrock usage and optimize model calls
 - **Performance**: Use appropriate Amazon Bedrock models for different analysis types
-- **Monitoring**: Set up CloudWatch alarms for pipeline failures
+- **Monitoring**: Set up Amazon CloudWatch alarms for pipeline failures
 - **Documentation**: Keep pipeline configuration documented and version controlled
 
 ## 13. Security
