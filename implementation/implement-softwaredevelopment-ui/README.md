@@ -94,15 +94,24 @@ aws bedrock list-inference-profiles --region us-east-1 --query 'inferenceProfile
 
 ## Deployment instructions
 
-### SSL Certificate Setup (REQUIRED)
+### SSL Certificate Setup (OPTIONAL)
 
-**Complete this step BEFORE running the Quick Start deployment.**
+**You can deploy with either HTTP (development) or HTTPS (production).**
 
-HTTPS is mandatory for security compliance. Choose one of the following options:
+#### **Option 1: HTTP Deployment (Quick Start)**
 
-#### **Option 1: Production Certificate (Recommended)**
+**For development and testing:**
 
-**For production use with a real domain:**
+Simply leave the `CERTIFICATE_ARN` field empty in your `.env` file. The application will deploy with HTTP on port 80.
+
+```bash
+# In your .env file:
+CERTIFICATE_ARN=
+```
+
+#### **Option 2: HTTPS Deployment (Production)**
+
+**For production use with SSL certificate:**
 
 1. **Get a domain** from any registrar (Route 53, GoDaddy, Namecheap, Cloudflare, etc.)
 
@@ -122,20 +131,20 @@ HTTPS is mandatory for security compliance. Choose one of the following options:
      --region us-east-1
    ```
 
-4. **Get certificate ARN:**
+4. **Get certificate ARN and add to .env:**
    ```bash
    aws acm list-certificates --region us-east-1
    # Copy the ARN to your .env file
    ```
 
-#### **Option 2: Self-Signed Certificate (Development Only)**
+#### **Option 3: Self-Signed Certificate (Development with HTTPS)**
 
-**For testing and development:**
+**For testing HTTPS locally:**
 
 ```bash
-# Generate self-signed certificate
+# Generate self-signed certificate with proper domain
 openssl req -x509 -newkey rsa:2048 -keyout private.key -out certificate.crt -days 365 -nodes \
-  -subj "/C=US/ST=State/L=City/O=Company/CN=localhost"
+  -subj "/C=US/ST=California/L=San Francisco/O=Development/CN=icode-dev.local"
 
 # Import to ACM
 aws acm import-certificate \
@@ -143,16 +152,15 @@ aws acm import-certificate \
   --private-key fileb://private.key \
   --region us-east-1
 
-# Get the certificate ARN
+# Get the certificate ARN and add to .env
 aws acm list-certificates --region us-east-1
-# Copy the ARN to your .env file
 ```
 
 **Note**: Self-signed certificates will show security warnings in browsers but work for development.
 
 ### Quick Start
 
-**Prerequisites**: Complete SSL Certificate Setup above first.
+**No SSL certificate required for HTTP deployment!**
 
 ```bash
 # Clone and navigate to repository
@@ -170,7 +178,7 @@ Edit the `.env` file and replace the required variables with your corresponding 
 | `CDK_DEFAULT_ACCOUNT` | ✅ | AWS Account ID | `123456789012` |
 | `CDK_DEFAULT_REGION` | ✅ | AWS Region | `us-east-1` |
 | `ALLOWED_IP_ADDRESS` | ✅ | Your IP for ALB access | `1.2.3.4/32` |
-| `CERTIFICATE_ARN` | ✅ | ACM certificate ARN for HTTPS | `arn:aws:acm:region:account:certificate/cert-id` |
+| `CERTIFICATE_ARN` | ❌ | ACM certificate ARN (leave empty for HTTP) | `arn:aws:acm:region:account:certificate/cert-id` |
 | `CLAUDE_MODEL_ID` | ✅ | Claude model identifier | `us.anthropic.claude-3-7-sonnet-20250219-v1:0` |
 | `DOMAIN_NAME` | ❌ | Custom domain name | `myapp.example.com` |
 | `MCP_SERVER_URLS` | ❌ | MCP server endpoints | `https://abc.lambda-url.us-east-1.on.aws/` |
@@ -185,9 +193,13 @@ cd ..
 The deployment script will:
 1. Create ECR repository
 2. Build and push Docker image
-3. Deploy CDK infrastructure
+3. Deploy CDK infrastructure (HTTP or HTTPS based on certificate)
 4. Configure IAM permissions
 5. Provide access URLs and credentials
+
+**Deployment Options:**
+- **HTTP**: Leave `CERTIFICATE_ARN` empty for quick development deployment
+- **HTTPS**: Provide `CERTIFICATE_ARN` for production deployment with SSL
 
 ### Next Steps: Enhance with Knowledge Base and MCP Capabilities
 
@@ -270,23 +282,40 @@ To add MCP (Model Context Protocol) servers for enhanced capabilities:
 
 After successful deployment, follow these steps to start using the AI-powered development platform:
 
-#### Step 1: Sign Up and Login
+### Deployment Confirmation
+
+After running `./deploy.sh`, you should see output similar to:
+
+```
+✅ Deployment Complete!
+======================
+
+Outputs:
+ICodeStack.ApplicationURL = icode-url
+```
+
+**Note**: The URL will be `http://` for HTTP deployment or `https://` for HTTPS deployment.
+
+### Step 1: Sign Up and Login
 
 1. **Navigate to your deployed application** using the ALB DNS URL from deployment output
+   - **HTTP**: `http://your-alb-dns-name.us-east-1.elb.amazonaws.com`
+   - **HTTPS**: `https://your-alb-dns-name.us-east-1.elb.amazonaws.com`
 2. **Click "Sign Up"** to create a new account
-3. **Login** with your credentials
+3. **Verify your email** using the verification code sent to your email
+4. **Login** with your credentials
 
-#### Step 2: Navigate to Projects
+### Step 2: Navigate to Projects
 
 1. **Click "Projects"** in the top navigation bar
 2. **Create a new project** or select an existing one
 3. **Start your AI-powered development workflow**
 
-#### Step 3: Try These Example Prompts
+### Step 3: Try These Example Prompts
 
 Copy and paste these prompts to experience the platform's capabilities:
 
-##### 📋 Requirements Phase (30 seconds)
+#### 📋 Requirements Phase (30 seconds)
 ```
 Extract information available from my confluence page and create epics with story points
 ```
@@ -295,7 +324,7 @@ Extract information available from my confluence page and create epics with stor
 Create acceptance criteria for each Book Catalog Management Epic using Given/When/Then format. Include all success and error scenarios.
 ```
 
-##### 🎨 Design Phase (1-5 minutes)
+#### 🎨 Design Phase (1-5 minutes)
 ```
 generate design diagram for the Book Catalog Management Epic
 ```
@@ -320,7 +349,7 @@ give architecture analysis of Book Catalog Management Epic
 generate documentation for Book Catalog Management System using domain analysis tool
 ```
 
-#### Expected Response Times
+### Expected Response Times
 - **Requirements extraction**: ~30 seconds
 - **Acceptance criteria generation**: ~30 seconds  
 - **Design diagrams**: ~1 minute
@@ -329,15 +358,20 @@ generate documentation for Book Catalog Management System using domain analysis 
 - **Architecture analysis**: ~30 seconds
 - **Documentation generation**: ~1 minute
 
+### Tips for Best Results
+- Be specific in your prompts
+- Mention the epic or feature name clearly
+- Use the suggested prompt formats above
+- Wait for each response to complete before sending the next prompt
+- Check the "Projects" section to see generated artifacts
 
-#### Troubleshooting
+### Troubleshooting
 - If prompts don't work initially, ensure your MCP servers are properly configured
 - Check that your Confluence integration is set up if using Confluence-related prompts
 - Verify your AWS Bedrock model access is enabled
 - Review CloudWatch logs for any errors
 
 ### Post-Deployment Setup
-
 
 ### Security Features
 
@@ -352,7 +386,9 @@ See CONTRIBUTING for more information.
 
 ## Test
 
-- **Application health**: `https://your-alb-dns/health`
+- **Application health**: 
+  - HTTP: `http://your-alb-dns/health`
+  - HTTPS: `https://your-alb-dns/health`
 - **Logs**: CloudWatch `/ecs/icode-fullstack`
 - **Audit trail**: CloudWatch `/aws/cloudtrail/icode-audit`
 - **VPC flow logs**: CloudWatch `/aws/vpc/flowlogs`
