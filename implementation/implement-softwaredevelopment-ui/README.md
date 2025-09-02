@@ -278,7 +278,7 @@ To add MCP (Model Context Protocol) servers for enhanced capabilities:
 
 
 
-## 🚀 Getting Started - User Guide
+### 🚀 Getting Started - User Guide
 
 After successful deployment, follow these steps to start using the AI-powered development platform:
 
