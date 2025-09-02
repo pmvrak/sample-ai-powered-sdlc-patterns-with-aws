@@ -1,4 +1,4 @@
-# AI-Enhanced DevSecOps Pipeline with AWS Bedrock Integration
+# AI-Enhanced DevSecOps Pipeline with Amazon Bedrock Integration
 
 ## 1. Introduction
 
@@ -18,7 +18,7 @@ Let's explore how we can leverage Amazon Bedrock's Generative AI capabilities to
 
 ![Solution Architecture](images/devsecops.png "Solution Architecture")
 
-A comprehensive DevSecOps pipeline implementation that leverages AWS Bedrock for intelligent security analysis, code quality assessment, and automated failure handling. This solution enhances traditional CI/CD pipelines with AI-powered insights and automated security controls.
+A comprehensive DevSecOps pipeline implementation that leverages Amazon Bedrock for intelligent security analysis, code quality assessment, and automated failure handling. This solution enhances traditional CI/CD pipelines with AI-powered insights and automated security controls.
 
 The pipeline integrates multiple security and quality gates including SAST analysis, secrets detection, SBOM generation, and security scanning with real-time AI analysis of findings. It provides automated failure analysis and intelligent notifications to help teams quickly identify and resolve issues. The solution uses AWS CDK for infrastructure as code and implements best practices for secure software delivery.
 
@@ -26,7 +26,7 @@ The pipeline integrates multiple security and quality gates including SAST analy
   * Developers use AWS CDK for infrastructure as code(IaC). 
   * Amazon Q Developer can be used as part of Local development as it provides real-time secure coding assistance and best practices.
 
-* **Security Scanning & Quality Analysis** -  Amazon Bedrock assists in analyzing security patterns and providing remediation suggestions. In this pattern we have integrated Bedrock analysis in below stages(as an example), but can be integrated in other cnfigured stages as well.
+* **Security Scanning & Quality Analysis** -  Amazon  assists in analyzing security patterns and providing remediation suggestions. In this pattern we have integrated  analysis in below stages(as an example), but can be integrated in other cnfigured stages as well.
   * Code quality analysis
   * Security scan
   * Software Bill of Materials (SBOM) generation
@@ -35,13 +35,13 @@ The pipeline integrates multiple security and quality gates including SAST analy
   * Automated Integration tests with AI-assisted test case generation
   * Code linting for consistency and security best practices
 
-* **Deployment Controls** - Amazon Bedrock helps validate the deployment and changes to take the decision to proceed or not-to-proceed with Deployment.
+* **Deployment Controls** - Amazon  helps validate the deployment and changes to take the decision to proceed or not-to-proceed with Deployment.
   * Deployment analysis for infrastructure security
   * Manual approval gates for critical environment promotions
 
 ## 3. Repository Structure
 ```
-deployment/pattern-deploy-devsecops-bedrock/
+deployment/pattern-deploy-devsecops-/
 └── cdk/                              # CDK application root
     ├── bin/                          # CDK entry point
     │   └── cdk-pipeline.ts           # Main pipeline definition
@@ -72,7 +72,7 @@ This section outlines the CDK project structure for the DevSecOps pipeline imple
 - test: contains test files for the CDK code
 
 In this pattern we have 2 CDK stacks
-1. **CdkPipelineStack** - To deploy the AWS CodePipeline with all the stages, CodeBuild projects and AWS Bedrock integration code.
+1. **CdkPipelineStack** - To deploy the AWS CodePipeline with all the stages, CodeBuild projects and Amazon Bedrock integration code.
 2. **MyApplicationStack** - An example application which is deployed via the final stage of this DevSecOps pipeline.
 
 ## 4. Prerequisites
@@ -86,7 +86,7 @@ In this pattern we have 2 CDK stacks
   - CloudWatch resources
   - IAM roles
   - SNS topics
-  - Bedrock model
+  - Amazon Bedrock model
 - A [Gitlab repository](https://docs.gitlab.com/user/project/repository/)
 - An [AWS Connection to Gitlab](https://docs.aws.amazon.com/dtconsole/latest/userguide/connections-create-gitlab.html)
   
@@ -183,7 +183,7 @@ The pipeline includes several Bedrock-powered analysis scripts located in `cdk/s
 1. **Source** - GitLab repository integration
 2. **Build** - Code compilation and dependency management
 3. **Code Quality Analysis** - AI-powered code review and quality assessment
-4. **Security Scan** - SAST analysis with Bedrock insights
+4. **Security Scan** - SAST analysis with Amazon Bedrock insights
 5. **Test** - Automated testing with AI-generated test cases
 6. **SBOM Generation** - Software Bill of Materials creation and analysis
 7. **Deployment Analysis** - Infrastructure security validation
@@ -202,7 +202,7 @@ Update `lib/configs/pipeline-config.ts` to customize:
 - Source repository settings
 - Pipeline naming conventions
 - Notification preferences
-- Bedrock model selection
+- Amazon Bedrock model selection
 - Security scan parameters
 
 ## 8. Troubleshooting
@@ -215,15 +215,15 @@ Update `lib/configs/pipeline-config.ts` to customize:
    - AI failure analysis sent to configured notification email
    - Review generated analysis in CodeBuild logs
 
-2. **Bedrock Integration Issues**
-   - Issue: Bedrock API calls failing
+2. **Amazon Bedrock Integration Issues**
+   - Issue: Amazon Bedrock API calls failing
    - Ensure CodeBuild role has `bedrock:InvokeModel` permissions
-   - Verify AWS region supports Bedrock
+   - Verify AWS region supports Amazon Bedrock
    - Check model availability in your region
 
-3. **Bedrock Throttle Errors**
+3. **Amazon Bedrock Throttle Errors**
    - Issue: `ThrottlingException: Too many tokens, please wait before trying again`
-   - Ensure sufficient [Service Quota](https://us-east-1.console.aws.amazon.com/servicequotas/home?region=us-east-1) for Bedrock
+   - Ensure sufficient [Service Quota](https://us-east-1.console.aws.amazon.com/servicequotas/home?region=us-east-1) for Amazon Bedrock
    - Pattern uses `anthropic.claude-3-haiku` by default
    - Request quota increase or switch to available model
 
@@ -268,7 +268,7 @@ aws logs describe-log-groups --log-group-name-prefix "/aws/codebuild/"
 1. Create script in `cdk/scripts/`
 2. Update CodeBuild project configuration
 3. Add to pipeline stage definition
-4. Configure Bedrock model permissions
+4. Configure Amazon Bedrock model permissions
 
 ### Extending Security Scans
 - Modify `analyze-sast.js` for custom security rules
@@ -283,8 +283,8 @@ aws logs describe-log-groups --log-group-name-prefix "/aws/codebuild/"
 ## 12. Best Practices
 
 - **Security**: Enable all security scans and review findings regularly
-- **Cost Optimization**: Monitor Bedrock usage and optimize model calls
-- **Performance**: Use appropriate Bedrock models for different analysis types
+- **Cost Optimization**: Monitor Amazon Bedrock usage and optimize model calls
+- **Performance**: Use appropriate Amazon Bedrock models for different analysis types
 - **Monitoring**: Set up CloudWatch alarms for pipeline failures
 - **Documentation**: Keep pipeline configuration documented and version controlled
 
