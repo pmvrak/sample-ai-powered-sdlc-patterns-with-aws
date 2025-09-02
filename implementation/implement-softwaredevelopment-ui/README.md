@@ -291,12 +291,7 @@ After running `./deploy.sh`, you should see output similar to:
 ======================
 
 Outputs:
-ICodeStack.ApplicationURL = http://icode-alb-453460773.us-east-1.elb.amazonaws.com
-ICodeStack.UserPoolClientId = 6ce3u8gqu380pm8imp8uv562ia
-ICodeStack.UserPoolId = us-east-1_4cijlBfOk
-ICodeStack.LoadBalancerDNS = icode-alb-453460773.us-east-1.elb.amazonaws.com
-ICodeStack.IdentityPoolId = us-east-1:01e9e8cc-f75a-4b97-bd7e-6c83ab55e109
-ICodeStack.S3BucketName = icode-projects-bucket-1756733465277
+ICodeStack.ApplicationURL = icode-url
 ```
 
 **Note**: The URL will be `http://` for HTTP deployment or `https://` for HTTPS deployment.
