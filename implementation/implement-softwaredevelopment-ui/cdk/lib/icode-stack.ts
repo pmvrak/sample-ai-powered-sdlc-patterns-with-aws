@@ -132,15 +132,7 @@ export class ICodeStack extends cdk.Stack {
       ]
     });
 
-    // ALB outbound rule - only allow traffic to ECS tasks on the container port
-    new ec2.CfnSecurityGroupEgress(this, 'AlbToEcsEgress', {
-      groupId: albSg.attrGroupId,
-      ipProtocol: 'tcp',
-      fromPort: config.containerPort,
-      toPort: config.containerPort,
-      destinationSecurityGroupId: ecsSg.attrGroupId,
-      description: 'Allow ALB to communicate with ECS tasks'
-    });
+    // ALB outbound rule will be added after listener configuration
 
     // S3 Access Logs Bucket
     const accessLogsBucket = new s3.Bucket(this, 'AccessLogsBucket', {
@@ -741,50 +733,76 @@ export class ICodeStack extends cdk.Stack {
     // Ensure target group is created after ALB
     targetGroup.node.addDependency(cfnAlb);
 
-    // HTTPS-only configuration for maximum security (no HTTP listener)
+    // Configure HTTP or HTTPS based on certificate availability
+    let listener: elbv2.CfnListener;
 
-    // HTTPS Listener (mandatory for security compliance)
-    // Update ALB security group to allow HTTPS traffic
-    new ec2.CfnSecurityGroupIngress(this, 'AlbHttpsIngress', {
-      groupId: albSg.attrGroupId,
-      ipProtocol: 'tcp',
-      fromPort: 443,
-      toPort: 443,
-      cidrIp: config.allowedIpAddress,
-      description: 'HTTPS access from authorized IP only'
-    });
+    if (config.certificateArn) {
+      // HTTPS configuration with certificate
+      new ec2.CfnSecurityGroupIngress(this, 'AlbHttpsIngress', {
+        groupId: albSg.attrGroupId,
+        ipProtocol: 'tcp',
+        fromPort: 443,
+        toPort: 443,
+        cidrIp: config.allowedIpAddress,
+        description: 'HTTPS access from authorized IP only'
+      });
 
-    // Update ALB outbound rule for HTTPS
-    new ec2.CfnSecurityGroupEgress(this, 'AlbToEcsHttpsEgress', {
+      listener = new elbv2.CfnListener(this, 'HttpsListener', {
+        loadBalancerArn: cfnAlb.ref,
+        port: 443,
+        protocol: 'HTTPS',
+        certificates: [
+          {
+            certificateArn: config.certificateArn
+          }
+        ],
+        defaultActions: [
+          {
+            type: 'forward',
+            targetGroupArn: targetGroup.targetGroupArn
+          }
+        ]
+      });
+
+      console.log(`✅ HTTPS enabled with certificate: ${config.certificateArn}`);
+    } else {
+      // HTTP configuration without certificate
+      new ec2.CfnSecurityGroupIngress(this, 'AlbHttpIngress', {
+        groupId: albSg.attrGroupId,
+        ipProtocol: 'tcp',
+        fromPort: 80,
+        toPort: 80,
+        cidrIp: config.allowedIpAddress,
+        description: 'HTTP access from authorized IP only'
+      });
+
+      listener = new elbv2.CfnListener(this, 'HttpListener', {
+        loadBalancerArn: cfnAlb.ref,
+        port: 80,
+        protocol: 'HTTP',
+        defaultActions: [
+          {
+            type: 'forward',
+            targetGroupArn: targetGroup.targetGroupArn
+          }
+        ]
+      });
+
+      console.log(`✅ HTTP enabled (no certificate provided)`);
+    }
+
+    // Update ALB outbound rule
+    new ec2.CfnSecurityGroupEgress(this, 'AlbToEcsEgress', {
       groupId: albSg.attrGroupId,
       ipProtocol: 'tcp',
       fromPort: config.containerPort,
       toPort: config.containerPort,
       destinationSecurityGroupId: ecsSg.attrGroupId,
-      description: 'Allow ALB HTTPS to communicate with ECS tasks'
+      description: 'Allow ALB to communicate with ECS tasks'
     });
 
-    const httpsListener = new elbv2.CfnListener(this, 'HttpsListener', {
-      loadBalancerArn: cfnAlb.ref,
-      port: 443,
-      protocol: 'HTTPS',
-      certificates: [
-        {
-          certificateArn: config.certificateArn
-        }
-      ],
-      defaultActions: [
-        {
-          type: 'forward',
-          targetGroupArn: targetGroup.targetGroupArn
-        }
-      ]
-    });
-
-    // Ensure HTTPS listener is created after target group
-    httpsListener.addDependency(targetGroup.node.defaultChild as cdk.CfnResource);
-    
-    console.log(`✅ HTTPS enabled with certificate: ${config.certificateArn}`);
+    // Ensure listener is created after target group
+    listener.addDependency(targetGroup.node.defaultChild as cdk.CfnResource);
 
     // Add ECS service to target group - ensure this happens after all ALB components are ready
     service.attachToApplicationTargetGroup(targetGroup);
@@ -792,7 +810,7 @@ export class ICodeStack extends cdk.Stack {
     // Add ALB-related dependencies after components are created
     service.node.addDependency(cfnAlb);
     service.node.addDependency(targetGroup);
-    service.node.addDependency(httpsListener);
+    service.node.addDependency(listener);
 
     // Identity Pool Roles
     const authenticatedRole = new iam.Role(this, 'CognitoAuthenticatedRole', {
@@ -924,16 +942,18 @@ export class ICodeStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'ApplicationURL', {
-      value: `https://${config.domainName || this.alb.loadBalancerDnsName}`,
-      description: 'Application URL (HTTPS only)',
+      value: `${config.certificateArn ? 'https' : 'http'}://${config.domainName || this.alb.loadBalancerDnsName}`,
+      description: config.certificateArn ? 'Application URL (HTTPS)' : 'Application URL (HTTP)',
       exportName: 'ApplicationURL',
     });
 
-    new cdk.CfnOutput(this, 'CertificateArn', {
-      value: config.certificateArn,
-      description: 'SSL Certificate ARN',
-      exportName: 'CertificateArn',
-    });
+    if (config.certificateArn) {
+      new cdk.CfnOutput(this, 'CertificateArn', {
+        value: config.certificateArn,
+        description: 'SSL Certificate ARN',
+        exportName: 'CertificateArn',
+      });
+    }
 
     new cdk.CfnOutput(this, 'UserPoolId', {
       value: this.userPool.userPoolId,
@@ -1525,7 +1545,7 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     NagSuppressions.addStackSuppressions(this, [
       {
         id: 'AwsSolutions-IAM5',
-        reason: 'Wildcard permissions are necessary for this application to function properly with Bedrock models, S3 operations, and AWS service integrations',
+        reason: 'Wildcard permissions are necessary for this application to function properly with Bedrock models, S3 operations, MCP Lambda function URLs across regions, and AWS service integrations. Lambda wildcards are required because MCP server URLs can be deployed in different regions.',
         appliesTo: [
           'Resource::*',
           'Resource::<ProjectsBucket927789FE.Arn>/*',
@@ -1541,6 +1561,8 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
           `Resource::arn:aws:bedrock:us-east-1:${config.env.account}:knowledge-base/*/data-source/*`,
           'Resource::arn:aws:execute-api:us-east-1:*:*',
           `Resource::arn:aws:lambda:us-east-1:${config.env.account}:function:*`,
+          `Resource::arn:aws:lambda:us-west-2:${config.env.account}:function:*`,
+          `Resource::arn:aws:lambda:*:${config.env.account}:function:*`,
           'Resource::<LogGroupF5B46931.Arn>:*',
           'Resource::<ProjectsBucket927789FE.Arn>/projects/<cognito-identity.amazonaws.com:sub>/*'
         ]

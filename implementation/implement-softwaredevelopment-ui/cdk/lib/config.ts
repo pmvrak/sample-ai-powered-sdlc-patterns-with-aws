@@ -9,8 +9,8 @@ export interface ICodeConfig {
   // Network configuration
   allowedIpAddress: string;
 
-  // SSL/HTTPS configuration - HTTPS is mandatory for security compliance
-  certificateArn: string; // Required for HTTPS
+  // SSL/HTTPS configuration - Optional for development
+  certificateArn?: string; // Optional for HTTP-only deployment
   domainName?: string;
 
   // ECS configuration
@@ -48,26 +48,8 @@ export const config: ICodeConfig = {
   // Network configuration - users must set their own IP
   allowedIpAddress: process.env.ALLOWED_IP_ADDRESS || '', // No default - users must specify
 
-  // SSL/HTTPS configuration - HTTPS is mandatory for security compliance
-  certificateArn: (() => {
-    const certArn = process.env.CERTIFICATE_ARN;
-    if (!certArn) {
-      throw new Error(`
-🔒 CERTIFICATE_ARN is required for security compliance.
-
-To deploy with HTTPS (required for production):
-1. Create/import an SSL certificate in AWS Certificate Manager
-2. Add CERTIFICATE_ARN to your .env file
-
-For certificate creation help, see: https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html
-
-For development with self-signed certificate:
-openssl req -x509 -newkey rsa:2048 -keyout private.key -out certificate.crt -days 365 -nodes
-aws acm import-certificate --certificate fileb://certificate.crt --private-key fileb://private.key
-      `);
-    }
-    return certArn;
-  })(),
+  // SSL/HTTPS configuration - Optional for development
+  certificateArn: process.env.CERTIFICATE_ARN || undefined,
   domainName: process.env.DOMAIN_NAME || undefined,
 
   containerPort: 8000,
