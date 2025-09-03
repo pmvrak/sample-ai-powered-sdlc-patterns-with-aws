@@ -3,6 +3,7 @@
 ## Introduction
 
 This is a comprehensive development pattern that integrates Amazon S3 Vector knowledge bases with Kiro and Amazon Q CLI to streamline code development and test generation workflows, while strictly adhering to project specifications and guidelines. This solution provides contextual code suggestions and project guides to automated developer agents by using universal MCP protocol.
+
 #### 🎥 Demo in Kiro
 
 https://github.com/user-attachments/assets/c90d340b-9282-4456-8205-01f8a646cda1
@@ -26,7 +27,7 @@ This repository contains a complete MCP server implementation featuring:
 
 ### AWS Architecture Overview
 
-![Architecture Overview](images/knowledgebasemcp.png)
+![Architecture Overview](files/knowledgebasemcp.png)
 
 ### Application Architecture Overview
 
@@ -173,6 +174,17 @@ This deployment script will:
 - ✅ Build the TypeScript project
 - ✅ Generate MCP configuration template with correct paths
 - ✅ Provide setup instructions
+
+### Integration Options
+
+| AI Assistant | Configuration | Usage |
+|--------------|---------------|-------|
+| **Kiro IDE** | `.kiro/settings/mcp.json` | Built-in MCP support with visual interface |
+| **Amazon Q CLI** | `q mcp import --file config.json` | Command-line integration with natural language |
+
+**Jump to Integration:**
+- [🔌 Kiro Integration](#-kiro-integration) - Visual IDE integration
+- [🔌 Amazon Q CLI Integration](#-amazon-q-cli-integration) - Command-line integration
 
 ### Configuration
 
@@ -322,6 +334,129 @@ For a typical setup, your configuration might look like this:
 }
 ```
 
+## 🔌 Amazon Q CLI Integration
+
+### Adding MCP Server to Amazon Q CLI
+
+Amazon Q CLI has built-in MCP support, allowing you to use your knowledge base directly from the command line.
+
+**1. Check Amazon Q CLI Installation:**
+
+```bash
+# Verify Amazon Q CLI is installed
+q --version
+
+# Check MCP support
+q mcp --help
+```
+
+**2. Add MCP Server Configuration:**
+
+Create a temporary configuration file:
+
+```json
+{
+  "mcpServers": {
+    "project-kb": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/project-kb-mcp/dist/index.js"
+      ],
+      "cwd": "/absolute/path/to/project-kb-mcp",
+      "env": {
+        "COGNITO_USER_POOL_ID": "us-east-1_yourPoolId",
+        "COGNITO_CLIENT_ID": "yourClientId",
+        "COGNITO_IDENTITY_POOL_ID": "us-east-1:your-identity-pool-id",
+        "COGNITO_USERNAME": "your-username",
+        "COGNITO_PASSWORD": "your-password",
+        "DEFAULT_BACKEND": "bedrock",
+        "BEDROCK_KNOWLEDGE_BASE_ID": "YOUR_KB_ID",
+        "BEDROCK_REGION": "us-east-1",
+        "AWS_REGION": "us-east-1",
+        "NODE_ENV": "development",
+        "MCP_SERVER": "true"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "list_projects",
+        "set_active_project",
+        "search_all_projects",
+        "search",
+        "get_document",
+        "get_backend_info",
+        "switch_backend"
+      ]
+    }
+  }
+}
+```
+
+**3. Import Configuration:**
+
+```bash
+# Save the configuration to a temporary file
+# Then import it to Amazon Q CLI
+q mcp import --file mcp-config.json global
+
+# Verify the server was added
+q mcp list
+
+# Check server status
+q mcp status --name project-kb
+```
+
+**4. Test the Connection:**
+
+```bash
+# Start a chat session
+q chat
+
+# Test MCP tools (you'll be prompted to approve tool usage)
+"Please use the list_projects tool to show me available projects"
+"Search for authentication patterns across all projects"
+"Set active project to my-project and search for API docs"
+```
+
+
+### Benefits of Amazon Q CLI Integration
+
+**🚀 Command-Line Productivity:**
+- Access knowledge base directly from terminal
+- Integrate with shell scripts and automation
+- No need to switch between IDE and documentation
+
+**🔍 Natural Language Queries:**
+- Ask questions in plain English
+- Context-aware responses with project-specific information
+- Intelligent search across multiple projects simultaneously
+
+**⚡ Developer Workflow Integration:**
+- Use in CI/CD pipelines for documentation lookup
+- Integrate with existing command-line tools
+- Quick access during debugging and development
+
+### Troubleshooting Amazon Q CLI Integration
+
+**Common Issues:**
+
+1. **"MCP server still loading" message:**
+   - Ensure the MCP server builds successfully: `npm run build`
+   - Check that all environment variables are correctly set
+   - Verify AWS credentials and permissions
+
+2. **Authentication failures:**
+   - Verify Cognito User Pool and Identity Pool IDs
+   - Check username/password credentials
+   - Ensure Identity Pool has proper IAM role permissions
+
+3. **Tool approval prompts:**
+   - Type `t` to trust tools for the session
+   - Or add tools to `autoApprove` list in configuration
+
+4. **Server connection issues:**
+   - Remove and re-add the server: `q mcp remove --name project-kb`
+   - Check server logs by running the MCP server directly: `node dist/index.js`
+
 ## 🛠️ Available MCP Tools
 
 Once configured, the following tools are available in Kiro:
@@ -438,6 +573,26 @@ Can you show me the full content of the architecture document for the web-platfo
 
 # Set active project for focused work
 Set the active project to "e-commerce-platform" and then search for payment integration docs.
+```
+### Using in Amazon Q CLI
+
+Once configured, you can use natural language to interact with your knowledge base:
+
+```bash
+# List available projects
+q chat "What projects are available in our knowledge base?"
+
+# Search across all projects
+q chat "Find authentication patterns across all our projects"
+
+# Work with a specific project
+q chat "Set active project to e-commerce-platform and search for payment integration"
+
+# Get detailed documentation
+q chat "Show me the architecture document for the mobile app project"
+
+# Check server health
+q chat "What's the status of our knowledge base backend?"
 ```
 
 ### Troubleshooting Credentials
