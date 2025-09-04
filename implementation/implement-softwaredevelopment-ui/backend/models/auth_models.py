@@ -390,6 +390,7 @@ class SignUpResponse(BaseModel):
     """Response model for user signup."""
     message: str
     userSub: Optional[str] = None
+    identityCenterUserId: Optional[str] = None
     status: str = "success"
 
 

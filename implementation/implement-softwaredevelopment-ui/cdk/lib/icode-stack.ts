@@ -14,6 +14,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as sns from 'aws-cdk-lib/aws-sns';
+import * as identitystore from 'aws-cdk-lib/aws-identitystore';
 import { NagSuppressions } from 'cdk-nag';
 import { config } from './config';
 
@@ -30,7 +31,7 @@ export class ICodeStack extends cdk.Stack {
 
     // Validate basic configuration before deployment
     this.validateBasicConfiguration();
-    
+
     // Validate Claude model ID is set
     if (!process.env.CLAUDE_MODEL_ID) {
       throw new Error('CLAUDE_MODEL_ID environment variable is required. Set it in your .env file.');
@@ -79,7 +80,7 @@ export class ICodeStack extends cdk.Stack {
     if (!config.allowedIpAddress) {
       throw new Error('ALLOWED_IP_ADDRESS must be configured for security compliance');
     }
-    
+
     // Validate IP address is not unrestricted
     if (config.allowedIpAddress === '0.0.0.0/0' || config.allowedIpAddress === '::/0') {
       throw new Error('Security violation: ALB cannot allow unrestricted access. Configure ALLOWED_IP_ADDRESS to a specific IP or range.');
@@ -146,10 +147,10 @@ export class ICodeStack extends cdk.Stack {
     // Grant ALB service permissions to write access logs
     // Use the correct ELB service account for us-east-1
     const elbServiceAccount = new iam.AccountPrincipal('127311923021'); // ELB service account for us-east-1
-    
+
     // Also add the service principal as a fallback
     const elbServicePrincipal = new iam.ServicePrincipal('elasticloadbalancing.amazonaws.com');
-    
+
     // Add policies for both service account and service principal
     accessLogsBucket.addToResourcePolicy(
       new iam.PolicyStatement({
@@ -329,6 +330,317 @@ export class ICodeStack extends cdk.Stack {
       precedence: 20,
     });
 
+    // Create custom IAM role for Identity Center Lambda function
+    const identityCenterLambdaRole = new iam.Role(this, 'IdentityCenterLambdaRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      inlinePolicies: {
+        IdentityCenterLambdaPolicy: new iam.PolicyDocument({
+          statements: [
+            // CloudWatch Logs permissions (instead of AWS managed policy)
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:CreateLogGroup',
+              ],
+              resources: [`arn:aws:logs:${config.env.region}:${config.env.account}:log-group:/aws/lambda/ICodeStack-CreateIdentityCenterGroup*`],
+            }),
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:CreateLogStream',
+                'logs:PutLogEvents',
+              ],
+              resources: [`arn:aws:logs:${config.env.region}:${config.env.account}:log-group:/aws/lambda/ICodeStack-CreateIdentityCenterGroup*:*`],
+            }),
+            // Identity Center permissions
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'sso:ListInstances',
+                'sso:DescribeInstance',
+                'sso-admin:ListInstances',
+                'sso-admin:DescribeInstance',
+                'identitystore:CreateGroup',
+                'identitystore:GetGroupId',
+                'identitystore:DescribeGroup',
+              ],
+              resources: ['*'], // Identity Center operations require wildcard
+            }),
+            // SSM permissions for storing configuration
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'ssm:PutParameter',
+              ],
+              resources: [
+                `arn:aws:ssm:${config.env.region}:${config.env.account}:parameter/icode/identity-center/*`,
+              ],
+            }),
+          ],
+        }),
+      },
+    });
+
+    // Create IAM Identity Center Group using Custom Resource
+    const createIdentityCenterGroup = new lambda.Function(this, 'CreateIdentityCenterGroup', {
+      runtime: lambda.Runtime.NODEJS_22_X,  // Latest runtime
+      handler: 'index.handler',
+      role: identityCenterLambdaRole,
+      code: lambda.Code.fromInline(`
+const { SSOAdminClient, ListInstancesCommand, DescribeInstanceCommand } = require('@aws-sdk/client-sso-admin');
+const { IdentitystoreClient, CreateGroupCommand, GetGroupIdCommand } = require('@aws-sdk/client-identitystore');
+const { SSMClient, PutParameterCommand } = require('@aws-sdk/client-ssm');
+const https = require('https');
+const url = require('url');
+
+// Function to send response back to CloudFormation
+async function sendResponse(event, context, responseStatus, responseData, physicalResourceId, noEcho) {
+    const responseUrl = event.ResponseURL;
+    const responseBody = JSON.stringify({
+        Status: responseStatus,
+        Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
+        PhysicalResourceId: physicalResourceId || context.logStreamName,
+        StackId: event.StackId,
+        RequestId: event.RequestId,
+        LogicalResourceId: event.LogicalResourceId,
+        NoEcho: noEcho || false,
+        Data: responseData
+    });
+
+    console.log("Response body:", responseBody);
+
+    const parsedUrl = url.parse(responseUrl);
+    const options = {
+        hostname: parsedUrl.hostname,
+        port: 443,
+        path: parsedUrl.path,
+        method: "PUT",
+        headers: {
+            "content-type": "",
+            "content-length": responseBody.length
+        }
+    };
+
+    return new Promise((resolve, reject) => {
+        const request = https.request(options, (response) => {
+            console.log("Status code: " + response.statusCode);
+            console.log("Status message: " + response.statusMessage);
+            resolve();
+        });
+
+        request.on("error", (error) => {
+            console.log("send(..) failed executing https.request(..): " + error);
+            reject(error);
+        });
+
+        request.write(responseBody);
+        request.end();
+    });
+}
+
+exports.handler = async (event, context) => {
+    console.log('Event:', JSON.stringify(event, null, 2));
+    
+    try {
+        const requestType = event.RequestType;
+        
+        if (requestType === 'Create') {
+            const ssoAdmin = new SSOAdminClient({});
+            const identitystore = new IdentitystoreClient({});
+            const ssm = new SSMClient({});
+            
+            // List instances to get the identity store ID
+            const instancesResponse = await ssoAdmin.send(new ListInstancesCommand({}));
+            const instances = instancesResponse.Instances;
+            
+            if (!instances || instances.length === 0) {
+                throw new Error('No Identity Center instance found');
+            }
+            
+            const identityStoreId = instances[0].IdentityStoreId;
+            const instanceArn = instances[0].InstanceArn;
+            
+            let groupId;
+            
+            // Check if group already exists
+            try {
+                const response = await identitystore.send(new GetGroupIdCommand({
+                    IdentityStoreId: identityStoreId,
+                    AlternateIdentifier: {
+                        UniqueAttribute: {
+                            AttributePath: 'DisplayName',
+                            AttributeValue: 'allIcodeUsers'
+                        }
+                    }
+                }));
+                groupId = response.GroupId;
+                console.log('Group allIcodeUsers already exists:', groupId);
+            } catch (error) {
+                if (error.name === 'ResourceNotFoundException') {
+                    // Create the group
+                    const response = await identitystore.send(new CreateGroupCommand({
+                        IdentityStoreId: identityStoreId,
+                        DisplayName: 'allIcodeUsers',
+                        Description: 'Group containing all iCode platform users'
+                    }));
+                    groupId = response.GroupId;
+                    console.log('Created group allIcodeUsers:', groupId);
+                } else {
+                    console.error('Error checking for existing group:', error);
+                    throw error;
+                }
+            }
+            
+            console.log('Final groupId to store in SSM:', groupId);
+            
+            if (!groupId) {
+                throw new Error('Failed to get or create group ID');
+            }
+            
+            // Store configuration in SSM
+            console.log('Storing instance ARN in SSM:', instanceArn);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/instance-arn',
+                Value: instanceArn,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('Storing identity store ID in SSM:', identityStoreId);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/identity-store-id',
+                Value: identityStoreId,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('Storing group ID in SSM:', groupId);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/all-users-group-id',
+                Value: groupId,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('All SSM parameters stored successfully');
+            
+            await sendResponse(event, context, 'SUCCESS', {
+                GroupId: groupId,
+                IdentityStoreId: identityStoreId,
+                InstanceArn: instanceArn
+            }, groupId);
+            
+        } else if (requestType === 'Update') {
+            // Handle update requests the same as create to ensure SSM parameters are set
+            console.log('Update request - processing same as create');
+            
+            const ssoAdmin = new SSOAdminClient({});
+            const identitystore = new IdentitystoreClient({});
+            const ssm = new SSMClient({});
+            
+            // List instances to get the identity store ID
+            const instancesResponse = await ssoAdmin.send(new ListInstancesCommand({}));
+            const instances = instancesResponse.Instances;
+            
+            if (!instances || instances.length === 0) {
+                throw new Error('No Identity Center instance found');
+            }
+            
+            const identityStoreId = instances[0].IdentityStoreId;
+            const instanceArn = instances[0].InstanceArn;
+            
+            let groupId;
+            
+            // Check if group already exists
+            try {
+                const response = await identitystore.send(new GetGroupIdCommand({
+                    IdentityStoreId: identityStoreId,
+                    AlternateIdentifier: {
+                        UniqueAttribute: {
+                            AttributePath: 'DisplayName',
+                            AttributeValue: 'allIcodeUsers'
+                        }
+                    }
+                }));
+                groupId = response.GroupId;
+                console.log('Group allIcodeUsers already exists:', groupId);
+            } catch (error) {
+                if (error.name === 'ResourceNotFoundException') {
+                    // Create the group
+                    const response = await identitystore.send(new CreateGroupCommand({
+                        IdentityStoreId: identityStoreId,
+                        DisplayName: 'allIcodeUsers',
+                        Description: 'Group containing all iCode platform users'
+                    }));
+                    groupId = response.GroupId;
+                    console.log('Created group allIcodeUsers:', groupId);
+                } else {
+                    console.error('Error checking for existing group:', error);
+                    throw error;
+                }
+            }
+            
+            console.log('Final groupId to store in SSM:', groupId);
+            
+            if (!groupId) {
+                throw new Error('Failed to get or create group ID');
+            }
+            
+            // Store configuration in SSM
+            console.log('Storing instance ARN in SSM:', instanceArn);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/instance-arn',
+                Value: instanceArn,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('Storing identity store ID in SSM:', identityStoreId);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/identity-store-id',
+                Value: identityStoreId,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('Storing group ID in SSM:', groupId);
+            await ssm.send(new PutParameterCommand({
+                Name: '/icode/identity-center/all-users-group-id',
+                Value: groupId,
+                Type: 'String',
+                Overwrite: true
+            }));
+            
+            console.log('All SSM parameters stored successfully');
+            
+            await sendResponse(event, context, 'SUCCESS', {
+                GroupId: groupId,
+                IdentityStoreId: identityStoreId,
+                InstanceArn: instanceArn
+            }, event.PhysicalResourceId);
+            
+        } else if (requestType === 'Delete') {
+            // Don't delete the group on stack deletion to preserve users
+            console.log('Delete request - sending success response');
+            await sendResponse(event, context, 'SUCCESS', {}, event.PhysicalResourceId);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        await sendResponse(event, context, 'FAILED', {}, event.PhysicalResourceId || 'failed');
+    }
+};
+`),
+      timeout: cdk.Duration.minutes(5),
+    });
+
+    // Create Custom Resource with a timestamp to force updates
+    const identityCenterGroupResource = new cdk.CustomResource(this, 'IdentityCenterGroupResource', {
+      serviceToken: createIdentityCenterGroup.functionArn,
+      properties: {
+        ForceUpdate: Date.now().toString() // This will force the Lambda to run on every deployment
+      }
+    });
+
     // ECR Repository is created above
 
     // ECS Cluster
@@ -450,6 +762,46 @@ export class ICodeStack extends cdk.Stack {
           'cognito-idp:RespondToAuthChallenge',
         ],
         resources: [this.userPool.userPoolArn],
+      })
+    );
+
+    // IAM Identity Center permissions for user and group management
+    taskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'identitystore:CreateUser',
+          'identitystore:GetUserId',
+          'identitystore:DescribeUser',
+          'identitystore:UpdateUser',
+          'identitystore:DeleteUser',
+          'identitystore:ListUsers',
+          'identitystore:CreateGroup',
+          'identitystore:GetGroupId',
+          'identitystore:DescribeGroup',
+          'identitystore:ListGroups',
+          'identitystore:CreateGroupMembership',
+          'identitystore:DeleteGroupMembership',
+          'identitystore:ListGroupMemberships',
+          'identitystore:ListGroupMembershipsForMember',
+          'sso-admin:ListInstances',
+          'sso-admin:DescribeInstance',
+        ],
+        resources: ['*'], // Identity Center operations require wildcard resources
+      })
+    );
+
+    // SSM permissions to read Identity Center configuration
+    taskRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ssm:GetParameter',
+          'ssm:PutParameter',
+        ],
+        resources: [
+          `arn:aws:ssm:${config.env.region}:${config.env.account}:parameter/icode/identity-center/*`,
+        ],
       })
     );
 
@@ -636,6 +988,7 @@ export class ICodeStack extends cdk.Stack {
         BEDROCK_REGION: config.env.region,
         BEDROCK_KNOWLEDGE_BASE_ID: process.env.BEDROCK_KNOWLEDGE_BASE_ID || '',
         CONVERSATION_SUMMARIZER_LAMBDA_ARN: this.conversationSummarizerLambda.functionArn,
+
       },
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ecs',
@@ -701,7 +1054,7 @@ export class ICodeStack extends cdk.Stack {
         reason: 'Access logs temporarily disabled to resolve S3 permissions issue during deployment. Will be re-enabled after successful deployment.'
       }
     ]);
-    
+
     // Create ALB reference for other constructs
     this.alb = elbv2.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, 'AlbRef', {
       loadBalancerArn: cfnAlb.ref,
@@ -806,7 +1159,7 @@ export class ICodeStack extends cdk.Stack {
 
     // Add ECS service to target group - ensure this happens after all ALB components are ready
     service.attachToApplicationTargetGroup(targetGroup);
-    
+
     // Add ALB-related dependencies after components are created
     service.node.addDependency(cfnAlb);
     service.node.addDependency(targetGroup);
@@ -986,13 +1339,13 @@ export class ICodeStack extends cdk.Stack {
     });
 
     // ECR Repository URI: ${config.env.account}.dkr.ecr.${config.env.region}.amazonaws.com/${config.repositoryName}:${config.imageTag}
-    
+
     // CDK Nag Suppressions for necessary wildcard permissions
     this.addCdkNagSuppressions();
-    
+
     // Validate security compliance after all resources are created
     this.validateSecurityCompliance();
-    
+
     console.log('✅ All resources created and security compliance validated');
   }
 
@@ -1413,22 +1766,22 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
   private validateSecurityCompliance() {
     console.log('🔒 Validating security compliance requirements...');
-    
+
     // Validate network security configuration
     this.validateNetworkSecurity();
-    
+
     // Validate encryption settings
     this.validateEncryptionSettings();
-    
+
     // Validate access control configuration
     this.validateAccessControl();
-    
+
     // Validate logging and monitoring
     this.validateLoggingAndMonitoring();
-    
+
     // Validate data protection measures
     this.validateDataProtection();
-    
+
     console.log('✅ All security validations passed');
   }
 
@@ -1459,10 +1812,10 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
   private validateEncryptionSettings() {
     // S3 encryption is enforced in bucket configuration with S3_MANAGED encryption
     // SSL enforcement is configured via bucket policy (enforceSSL: true)
-    
+
     // Validate that we're using HTTPS endpoints for all AWS services
     // This is enforced by default in AWS SDK and CDK constructs
-    
+
     console.log('  ✅ Encryption: S3 server-side encryption and SSL enforcement configured');
   }
 
@@ -1474,7 +1827,7 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
     // Validate that self-signup is disabled (admin-only user creation)
     // This is enforced in the Cognito configuration
-    
+
     // Validate password policy strength
     // Password policy is configured with strong requirements in Cognito setup
 
@@ -1484,10 +1837,10 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
   private validateLoggingAndMonitoring() {
     // Validate that CloudTrail is configured for audit logging
     // CloudTrail configuration is present in the stack
-    
+
     // Validate log retention policies
     // Log retention is configured for various log groups
-    
+
     // Validate monitoring alarms are configured
     // CloudWatch alarms are configured for security events
 
@@ -1514,7 +1867,7 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
   private addCdkNagSuppressions() {
     // Suppress CDK Nag warnings for necessary wildcard permissions
-    
+
     // Suppress Cognito advanced security warning - requires paid Plus plan
     NagSuppressions.addResourceSuppressions(
       this.userPool,
@@ -1545,7 +1898,7 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     NagSuppressions.addStackSuppressions(this, [
       {
         id: 'AwsSolutions-IAM5',
-        reason: 'Wildcard permissions are necessary for this application to function properly with Bedrock models, S3 operations, MCP Lambda function URLs across regions, and AWS service integrations. Lambda wildcards are required because MCP server URLs can be deployed in different regions.',
+        reason: 'Wildcard permissions are necessary for this application to function properly with Bedrock models, S3 operations, MCP Lambda function URLs across regions, AWS service integrations, and Identity Center configuration. Lambda wildcards are required because MCP server URLs can be deployed in different regions. SSM wildcard is scoped to /icode/identity-center/* for dynamic Identity Center configuration. CloudWatch Logs wildcards are scoped to specific Lambda function log groups for proper logging.',
         appliesTo: [
           'Resource::*',
           'Resource::<ProjectsBucket927789FE.Arn>/*',
@@ -1564,7 +1917,10 @@ def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
           `Resource::arn:aws:lambda:us-west-2:${config.env.account}:function:*`,
           `Resource::arn:aws:lambda:*:${config.env.account}:function:*`,
           'Resource::<LogGroupF5B46931.Arn>:*',
-          'Resource::<ProjectsBucket927789FE.Arn>/projects/<cognito-identity.amazonaws.com:sub>/*'
+          'Resource::<ProjectsBucket927789FE.Arn>/projects/<cognito-identity.amazonaws.com:sub>/*',
+          `Resource::arn:aws:ssm:${config.env.region}:${config.env.account}:parameter/icode/identity-center/*`,
+          `Resource::arn:aws:logs:${config.env.region}:${config.env.account}:log-group:/aws/lambda/ICodeStack-CreateIdentityCenterGroup*`,
+          `Resource::arn:aws:logs:${config.env.region}:${config.env.account}:log-group:/aws/lambda/ICodeStack-CreateIdentityCenterGroup*:*`
         ]
       }
     ]);
