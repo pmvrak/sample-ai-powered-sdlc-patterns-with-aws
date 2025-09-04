@@ -207,15 +207,17 @@ def create_auth_router(
         """
         Register a new user account.
         
-        This endpoint creates a new user in AWS Cognito with the specified
-        SDLC role and assigns them to the admin group by default.
+        This endpoint creates a new user in both AWS Cognito and IAM Identity Center
+        with the specified SDLC role and assigns them to the admin group by default.
         """
         try:
             import boto3
             from botocore.exceptions import ClientError
+            from services.identity_center_service import IdentityCenterService
             
-            # Initialize Cognito client
+            # Initialize clients
             cognito_client = boto3.client('cognito-idp', region_name=cognito_config.region)
+            identity_center_service = IdentityCenterService(region=cognito_config.region)
             
             # Prepare user attributes
             user_attributes = [
@@ -255,6 +257,27 @@ def create_auth_router(
                 logger.warning(f"Failed to add user to group {signup_request.userGroup}: {e}")
                 # Continue anyway, user is created
             
+            # Create user in IAM Identity Center and add to allIcodeUsers group
+            identity_center_user_id = None
+            try:
+                identity_center_user = identity_center_service.create_user_and_add_to_group(
+                    username=signup_request.username,
+                    email=signup_request.email,
+                    first_name=signup_request.firstName,
+                    last_name=signup_request.lastName
+                )
+                
+                if identity_center_user:
+                    identity_center_user_id = identity_center_user.user_id
+                    logger.info(f"Successfully created Identity Center user: {identity_center_user.username} with ID: {identity_center_user_id}")
+                else:
+                    logger.error(f"Failed to create Identity Center user for {signup_request.username}")
+                    
+            except Exception as e:
+                logger.error(f"Error creating Identity Center user: {str(e)}")
+                # Don't fail the entire signup if Identity Center creation fails
+                # The Cognito user is still created successfully
+            
             # Send verification email
             try:
                 cognito_client.admin_initiate_auth(
@@ -278,8 +301,9 @@ def create_auth_router(
             user_sub = response['User']['Username']  # Cognito returns the user sub
             
             return SignUpResponse(
-                message="Account created successfully! Please check your email for a confirmation code.",
-                userSub=user_sub
+                message="Account created successfully in both Cognito and Identity Center! Please check your email for a confirmation code.",
+                userSub=user_sub,
+                identityCenterUserId=identity_center_user_id
             )
             
         except ClientError as e:
