@@ -4,6 +4,8 @@
 
 This project provides a Model Context Protocol (MCP) server for AI-powered Splunk incident management and analysis. The solution enables developers and AI assistants to detect, analyze, and remediate incidents using real-time Splunk data, Amazon Bedrock AI services, and automated response workflows.
 
+https://github.com/user-attachments/assets/af2fd524-ed8a-4e35-9b43-3b3856798707
+
 ### 🎯 Overview
 
 This repository contains an MCP server that provides AI-powered incident management capabilities:
