@@ -1,0 +1,84 @@
+# Environment files
+.env
+*.env.local
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+env/
+ENV/
+
+# AWS
+.aws/
+*.pem
+
+# Deployment artifacts
+lambda-deployment.zip
+oauth-deployment.zip
+lambda-package/
+oauth-server-package/
+
+# CDK
+deployment/cdk/cdk.out/
+deployment/cdk/node_modules/
+
+# Logs
+*.log
+tunnel.log
+
+# Tokens and credentials
+*token*.json
+.jenkins_mcp_token.json
+
+# Backup files
+*.bak
+*.backup
+
+# Demo materials (environment-specific)
+demo-materials/
+demo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local configuration
+config.local.json
+settings.local.py
