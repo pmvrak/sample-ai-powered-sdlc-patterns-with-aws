@@ -260,16 +260,18 @@ class EnhancedSlackIntegration:
         async def handle_slack_events(request: Request):
             """Handle Slack events (mentions, messages, etc.)"""
             try:
-                # Verify Slack signature
-                if not await self._verify_slack_signature(request):
-                    raise HTTPException(status_code=401, detail="Invalid signature")
-                
-                # Parse event data
+                # Parse event data first to check for URL verification
                 event_data = await request.json()
                 
-                # Handle URL verification challenge
+                # Handle URL verification challenge BEFORE signature verification
+                # This is needed during Slack app setup
                 if event_data.get("type") == "url_verification":
+                    logger.info("Handling Slack URL verification challenge")
                     return JSONResponse({"challenge": event_data.get("challenge")})
+                
+                # For all other events, verify Slack signature
+                if not await self._verify_slack_signature(request):
+                    raise HTTPException(status_code=401, detail="Invalid signature")
                 
                 # Handle app mentions and direct messages
                 event = event_data.get("event", {})
