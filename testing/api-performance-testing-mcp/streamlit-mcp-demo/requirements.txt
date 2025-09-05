@@ -1,0 +1,7 @@
+streamlit
+boto3
+botocore
+urllib3
+pandas
+python-dateutil
+defusedxml
