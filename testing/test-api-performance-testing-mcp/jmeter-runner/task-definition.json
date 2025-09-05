@@ -1,0 +1,36 @@
+{
+  "family": "jmeter-runner",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "jmeter-runner",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/jmeter-runner:latest",
+      "essential": true,
+      "environment": [
+        {
+          "name": "TARGET_HOST",
+          "value": "fake-api-service.local"
+        },
+        {
+          "name": "TARGET_PORT",
+          "value": "8080"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/jmeter-runner",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "mountPoints": [],
+      "volumesFrom": []
+    }
+  ]
+}

@@ -57,7 +57,7 @@ Before deploying the MCP server, ensure you have:
 - **Python 3.11+** - Runtime environment
 - **AWS CLI v2** - Configured with appropriate credentials
 - **AWS CDK v2** - For infrastructure deployment
-- **Docker** - For containerized Lambda deployment
+- **Docker** - For containerized Lambda deployment (must support linux/amd64 platform)
 - **Node.js 18+** - Required by CDK
 
 ### AWS Account Requirements
@@ -91,8 +91,8 @@ aws configure
 
 #### 1. Clone and Setup
 ```bash
-git clone https://github.com/aws-samples/aws-architecture-design-mcp-server.git
-cd aws-architecture-design-mcp-server
+git clone https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws
+cd design-and-architecture/design-solutionarchitecture-mcp
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 ```
@@ -154,6 +154,16 @@ cdk deploy     # Automatically detects your account and region
 
 # For automated deployments without prompts:
 cdk deploy --require-approval never
+```
+
+**Note**: If you're on Apple Silicon (M1/M2/M3) or other ARM-based systems, CDK will automatically handle cross-platform Docker builds for Lambda. If you encounter Docker build issues, you can manually build for the correct platform using:
+
+```bash
+# Enable Docker buildx for multi-platform builds 
+docker buildx create --use --name multiarch
+
+# Build for linux/amd64 platform (required for AWS Lambda)(recommended)
+docker buildx build --platform linux/amd64 -t your-image .
 ```
 
 **What happens during deployment:**
@@ -628,29 +638,6 @@ awscurl --service lambda --region us-east-1 \
 awscurl --service lambda --region us-east-1 \
   -X GET https://YOUR-UNIQUE-ID.lambda-url.us-east-1.on.aws/
 ```
-
-### Comprehensive Testing
-```bash
-# Install testing dependencies
-pip install requests
-
-# Run all tests
-python test_deployed_server.py
-```
-
-### Expected Test Results
-✅ **Server Health**: GET request returns server info  
-✅ **MCP Initialize**: Protocol handshake successful  
-✅ **Tools List**: Shows all 4 available tools  
-✅ **Simple Tool Call**: AWS knowledge query works  
-✅ **Diagram Generation**: Creates and uploads diagrams to S3  
-
-### Test Script Features
-The test script validates:
-- Server connectivity and authentication
-- All 4 MCP tools functionality
-- Diagram generation and S3 upload
-- Error handling and response formats
 
 ### Manual Testing Examples
 ```bash
