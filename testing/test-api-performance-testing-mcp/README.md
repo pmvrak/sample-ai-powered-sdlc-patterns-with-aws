@@ -51,7 +51,7 @@ aws configure        # Enter AWS credentials
 ## 4. Deployment instructions
 ```bash
 git clone https://github.com/aws-samples/sample-ai-powered-sdlc-patterns-with-aws/tree/main
-cd testing/api-performance-testing-mcp
+cd testing/test-api-performance-testing-mcp
 
 # 1. Deploy infrastructure (includes MCP Lambda function)
 cd infrastructure-cdk
